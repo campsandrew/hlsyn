@@ -33,5 +33,5 @@ string Variable::toString(){
         sign = "signed ";
     }
     
-    return "\treg" + sign + width + this->name + ";";
+    return "\treg " + sign + width + this->name + ";";
 }

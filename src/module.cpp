@@ -152,6 +152,11 @@ bool Module::parseLine(vector<string> line) {
         
     } else {
         
+        /* Checks to see if the first variable is an output type */
+        bool assigned = false;
+        string var = line.front();
+        Operation *newOp = new Operation();
+        
     }
     
     return true;
@@ -180,10 +185,14 @@ bool Module::output_module(string file) {
     /* Prints heading */
     out << "`timescale 1ns / 1ns" << endl << endl;
     out << "module " << this->name << "(";
-    for(int i = 0; i < (signed)this->inputs.size(); i++){
+    out << inputs.at(0)->getName() << ", ";
+    out << inputs.at(1)->getName() << ", ";
+    out << inputs.at(2)->getName() << ", ";
+    out << outputs.at(0)->getName() << ", ";
+    for(int i = 3; i < (signed)this->inputs.size(); i++){
         out << inputs.at(i)->getName() << ", ";;
     }
-    for(int i = 0; i < (signed)this->outputs.size(); i++){
+    for(int i = 1; i < (signed)this->outputs.size(); i++){
         if(i == (signed)this->outputs.size() - 1){
             out << outputs.at(i)->getName();
             break;
@@ -207,16 +216,30 @@ bool Module::output_module(string file) {
     out << endl;
     
     /* Prints operations */
-//    for(int i = 0; i < (signed)this->operations.size(); i++){
-//        out << operations.at(i)->toString() << endl;
-//    }
-//    out << endl;
+    for(int i = 0; i < (signed)this->operations.size(); i++){
+        out << operations.at(i)->toString() << endl;
+    }
+    out << endl;
     
     /* Prints ending */
     out << "endmodule" << endl;
     out.close();
     
     return true;
+}
+
+/**
+ * Calculates the next available operation id
+ */
+int Module::getID(Operations operation){
+    int id = 1;
+    for(int i = 0; i < (signed)this->operations.size(); i++){
+        if(this->operations.at(i)->getOperation() == operation){
+            id++;
+        }
+    }
+    
+    return id;
 }
 
 /**
