@@ -29,7 +29,7 @@ int main(int argc, char *argv[]) {
     }
 
     /* Initialize and build module datapath from input file */
-    module = new Module(name);
+    module = new Module(name, stoi(argv[ARG_LATENCY]));
     if (!module->build_module(argv[ARG_FILE_IN])) {
         cout << "Failed to build module from input file : " << argv[ARG_FILE_IN] << endl;
         return EXIT_FAILURE;

@@ -35,15 +35,20 @@ enum Type {
 class Module {
 private:
     string name;
+    int Latency;
     bool readFile(string file);
     bool getDataType(string type, int *size);
     bool parseLine(vector<string> line);
     int getID(Operations operation);
     vector<string> split(string const &input);
+    bool scheduleOperations();
+    bool getALAPTimes();
+    bool getASAPTimes();
 public:
-    Module(string name);
+    Module(string name, int latency);
     string getName() { return name; }
-    bool build_module(string file) { return readFile(file) ? true : false; }    /* Builds the data path graph */
+    int getLatency() { return Latency; }
+    bool build_module(string file);    /* Builds the data path graph */
     bool output_module(string file);                                            /* Prints the module in .v format */
     vector<Operation *> operations;
     vector<Output *> outputs;

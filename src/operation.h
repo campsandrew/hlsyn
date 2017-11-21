@@ -16,6 +16,8 @@
 #include "variable.h"
 
 #define NUM_INPUTS 3
+#define INTERVAL_MAX 1
+#define INTERVAL_MIN 0
 
 class Variable;
 class Input;
@@ -50,6 +52,7 @@ public:
     Operations getOperation() { return operation; }
     void setOperation(Operations op) {operation = op; }
     int getOpID() { return operationID; }
+    int getCycleDelay();
     void setOpID(int ID) { operationID = ID; }
     void calcWidth();
     void setSign();
@@ -59,6 +62,8 @@ public:
     Variable *varNext;
     Variable *inVar[NUM_INPUTS];
     Input *inInput[NUM_INPUTS];
+    int timeASAP = -1;
+    int timeALAP = -1;
 };
 
 #endif /* operation_h */

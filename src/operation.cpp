@@ -75,6 +75,29 @@ void Operation::setSign() {
     sign = usigned ? "" : "S";
 }
 
+int Operation::getCycleDelay(){
+    switch(operation){
+        case ADD:
+        case SUB:
+        case COMP_GT:
+        case COMP_LT:
+        case COMP_EQ:
+        case MUX2x1:
+        case SHR:
+        case SHL:
+        case INC:
+        case DEC:
+            return 1;
+        case MUL:
+            return 2;
+        case DIV:
+        case MOD:
+            return 3;
+    }
+    
+    return 0;
+}
+
 /**
  * To string method that outputs each operation in verilog syntax with correct bit sizes for inputs and outputs as well
  * as mix sign types

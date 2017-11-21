@@ -26,6 +26,7 @@ public:
     int getWidth() { return dataWidth; }
     bool isUnsigned() { return usigned; }
     string toString();
+    int outCycle = -1;
 };
 
 #endif /* output_h */

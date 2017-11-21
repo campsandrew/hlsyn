@@ -13,8 +13,16 @@
 /**
  * Constructor
  */
-Module::Module(string name){
+Module::Module(string name, int latency){
     this->name = name;
+    this->Latency = latency;
+}
+
+bool Module::build_module(string file) {
+    int status = readFile(file) ? true : false;
+    scheduleOperations();
+    
+    return status;
 }
 
 /**
@@ -159,7 +167,7 @@ bool Module::parseLine(vector<string> line) {
         for(int i = 0; i < (signed)this->outputs.size(); i++){
             /* Check if this is a not REG operation to output */
             if(var.compare(outputs.at(i)->getName()) == 0){
-                //TODO:
+                newOp->outNext = outputs.at(i);
                 assigned = true;
                 break;
             }
@@ -167,8 +175,7 @@ bool Module::parseLine(vector<string> line) {
         if(!assigned){
             for(int i = 0; i < (signed)this->variables.size(); i++){
                 if(var.compare(variables.at(i)->getName()) == 0){
-                    
-                    //TODO:
+                    newOp->varNext = variables.at(i);
                     assigned = true;
                     break;
                 }
@@ -480,6 +487,98 @@ bool Module::getDataType(string type, int *size){
     
     /* return signed or unsigned */
     return type.find("UInt") ? false : true;
+}
+
+/**
+ *
+ */
+bool Module::scheduleOperations() {
+    getASAPTimes();
+    getALAPTimes();
+    
+    return true;
+}
+
+/**
+ *
+ */
+bool Module::getASAPTimes() {
+    vector<Operation *> operationQueue;
+    
+    /* Put all operations on queue */
+    for (int i = 0; i < (signed)operations.size(); i++) {
+        operationQueue.push_back(operations.at(i));
+    }
+    
+    /* Loop until all variables and output delays have been updated */
+    while((signed)operationQueue.size() > 0){
+        
+        /* Iterate through all operations to update delays */
+        bool opRemoved = false;
+        for (int i = 0; i < (signed)operations.size(); i++) {
+            bool inCyclesCalculated = true;
+            double tempCycle = 0;
+            double maxInCycle = 0;
+            
+            /* Get the current maximum delay from operation inputs */
+            for(int j = 0; j < NUM_INPUTS; j++){
+                if(operations.at(i)->inVar[j] != NULL){
+                    if(operations.at(i)->inVar[j]->outCycle == -1){
+                        inCyclesCalculated = false;
+                        break;
+                    }else{
+                        if(maxInCycle < operations.at(i)->inVar[j]->outCycle){
+                            maxInCycle = operations.at(i)->inVar[j]->outCycle;
+                            
+                        }
+                    }
+                }else{
+                    break;
+                }
+            }
+            
+            /* Check if all delay dependencies have been calculated */
+            if(inCyclesCalculated){
+                
+                /* Pass delay of operation output */
+                operations.at(i)->timeASAP = maxInCycle + 1;
+                tempCycle = maxInCycle + operations.at(i)->getCycleDelay();
+                if(operations.at(i)->varNext != NULL){
+                    operations.at(i)->varNext->outCycle = tempCycle;
+                }else{
+                    operations.at(i)->outNext->outCycle = tempCycle;
+                }
+                
+                /* Remove currently calculated operation from the operation queue */
+                for(int j = 0; j < (signed)operationQueue.size(); j++){
+                    if(operations.at(i)->getOperation() == operationQueue.at(j)->getOperation()
+                       && operations.at(i)->getOpID() == operationQueue.at(j)->getOpID()){
+                        operationQueue.erase(operationQueue.begin() + j);
+                        opRemoved = true;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        if(!opRemoved){
+            cout << "ERROR: Unconnected operation input wire" << endl;
+            return false;
+        }
+    }
+    
+    return true;
+    
+    
+}
+
+/**
+ *
+ */
+bool Module::getALAPTimes() {
+    
+    
+    return true;
 }
 
 /**
