@@ -156,6 +156,214 @@ bool Module::parseLine(vector<string> line) {
         bool assigned = false;
         string var = line.front();
         Operation *newOp = new Operation();
+        for(int i = 0; i < (signed)this->outputs.size(); i++){
+            /* Check if this is a not REG operation to output */
+            if(var.compare(outputs.at(i)->getName()) == 0){
+                //TODO:
+                assigned = true;
+                break;
+            }
+        }
+        if(!assigned){
+            for(int i = 0; i < (signed)this->variables.size(); i++){
+                if(var.compare(variables.at(i)->getName()) == 0){
+                    
+                    //TODO:
+                    assigned = true;
+                    break;
+                }
+            }
+        }
+        
+        /* No assignment was defined */
+        if(!assigned){
+            cout << "ERROR: Missing variable or ouput definition for: " << var << endl;
+            return false;
+        }
+        
+        /* Remove first variable and equals sign in operation line */
+        line.erase(line.begin());
+        line.erase(line.begin());
+        if(!line.size()){
+            return false;
+        }
+        
+        /* Assigns first Input or Variable to operation */
+        assigned = false;
+        var = line.front();
+        for(int i = 0; i < (signed)this->inputs.size(); i++){
+            if(var.compare(inputs.at(i)->getName()) == 0){
+                newOp->inInput[0] = inputs.at(i);
+                inputs.at(i)->toOperations.push_back(newOp);
+                assigned = true;
+                break;
+            }
+        }
+        if(!assigned){
+            for(int i = 0; i < (signed)this->variables.size(); i++){
+                if(var.compare(variables.at(i)->getName()) == 0){
+                    newOp->inVar[0] = variables.at(i);
+                    variables.at(i)->toOperations.push_back(newOp);
+                    assigned = true;
+                    break;
+                }
+            }
+        }
+        
+        /* No assignment was defined */
+        if(!assigned){
+            cout << "ERROR: Missing input or wire varible definition for: " << var << endl;
+            return false;
+        }
+        
+        /* Remove second variable in operation line */
+        line.erase(line.begin());
+        if(!line.size()){
+            return false;
+        }
+        
+        /* Gets operation type */
+        var = line.front();
+        if(var.compare("+") == 0){
+            line.erase(line.begin());
+            var = line.front();
+            if(var.compare("1") == 0){
+                newOp->setOperation(INC);
+                newOp->setOpID(getID(INC));
+                newOp->calcWidth();
+                newOp->setSign();
+                this->operations.push_back(newOp);
+                return true;
+            }
+            newOp->setOperation(ADD);
+            newOp->setOpID(getID(ADD));
+        } /* SUB or DEC */
+        else if(var.compare("-") == 0){
+            line.erase(line.begin());
+            var = line.front();
+            if(var.compare("1") == 0){
+                newOp->setOperation(DEC);
+                newOp->setOpID(getID(DEC));
+                newOp->calcWidth();
+                newOp->setSign();
+                this->operations.push_back(newOp);
+                return true;
+            }
+            newOp->setOperation(SUB);
+            newOp->setOpID(getID(SUB));
+        } /* MUL */
+        else if(var.compare("*") == 0){
+            newOp->setOperation(MUL);
+            newOp->setOpID(getID(MUL));
+        } /* COMP_GT */
+        else if(var.compare(">") == 0){
+            newOp->setOperation(COMP_GT);
+            newOp->setOpID(getID(COMP_GT));
+        } /* COMP_LT */
+        else if(var.compare("<") == 0){
+            newOp->setOperation(COMP_LT);
+            newOp->setOpID(getID(COMP_LT));
+        } /* COMP_EQ */
+        else if(var.compare("==") == 0){
+            newOp->setOperation(COMP_EQ);
+            newOp->setOpID(getID(COMP_EQ));
+        } /* MUX2x1 */
+        else if(var.compare("?") == 0){
+            newOp->setOperation(MUX2x1);
+            newOp->setOpID(getID(MUX2x1));
+        } /* SHR */
+        else if(var.compare(">>") == 0){
+            newOp->setOperation(SHR);
+            newOp->setOpID(getID(SHR));
+        } /* SHL */
+        else if(var.compare("<<") == 0){
+            newOp->setOperation(SHL);
+            newOp->setOpID(getID(SHL));
+        } /* DIV */
+        else if(var.compare("/") == 0){
+            newOp->setOperation(DIV);
+            newOp->setOpID(getID(DIV));
+        } /* MOD */
+        else if(var.compare("%") == 0){
+            newOp->setOperation(MOD);
+            newOp->setOpID(getID(MOD));
+        } /* Invalid Line/Operator */
+        else{
+            cout << "ERROR: Invalid type -> " << var << endl;
+            return false;
+        }
+        
+        /* Removes oporator if it hasn't been removed already */
+        if(newOp->getOperation() != ADD || newOp->getOperation() != SUB){
+            line.erase(line.begin());
+        }
+        
+        /* Assign out Input or Variable to operation */
+        assigned = false;
+        var = line.front();
+        for(int i = 0; i < (signed)this->inputs.size(); i++){
+            if(var.compare(inputs.at(i)->getName()) == 0){
+                newOp->inInput[1] = inputs.at(i);
+                inputs.at(i)->toOperations.push_back(newOp);
+                assigned = true;
+                break;
+            }
+        }
+        if(!assigned){
+            for(int i = 0; i < (signed)this->variables.size(); i++){
+                if(var.compare(variables.at(i)->getName()) == 0){
+                    newOp->inVar[1] = variables.at(i);
+                    variables.at(i)->toOperations.push_back(newOp);
+                    assigned = true;
+                    break;
+                }
+            }
+        }
+        
+        /* No assignment was defined */
+        if(!assigned){
+            cout << "ERROR: Missing input or variable definition for: " << var << endl;
+            return false;
+        }
+        
+        if(newOp->getOperation() == MUX2x1){
+            
+            line.erase(line.begin());
+            line.erase(line.begin());
+            
+            /* Assign out Input or Wire to operation */
+            assigned = false;
+            var = line.front();
+            for(int i = 0; i < (signed)this->inputs.size(); i++){
+                if(var.compare(inputs.at(i)->getName()) == 0){
+                    newOp->inInput[2] = inputs.at(i);
+                    inputs.at(i)->toOperations.push_back(newOp);
+                    assigned = true;
+                    break;
+                }
+            }
+            if(!assigned){
+                for(int i = 0; i < (signed)this->variables.size(); i++){
+                    if(var.compare(variables.at(i)->getName()) == 0){
+                        newOp->inVar[2] = variables.at(i);
+                        variables.at(i)->toOperations.push_back(newOp);
+                        assigned = true;
+                        break;
+                    }
+                }
+            }
+            
+            /* No assignment was defined */
+            if(!assigned){
+                cout << "ERROR: Missing input or variable definition for: " << var << endl;
+                return false;
+            }
+        }
+        
+        /* Adds operation to module */
+        newOp->calcWidth();
+        newOp->setSign();
+        this->operations.push_back(newOp);
         
     }
     
@@ -216,10 +424,10 @@ bool Module::output_module(string file) {
     out << endl;
     
     /* Prints operations */
-    for(int i = 0; i < (signed)this->operations.size(); i++){
-        out << operations.at(i)->toString() << endl;
-    }
-    out << endl;
+    //for(int i = 0; i < (signed)this->operations.size(); i++){
+    //    out << operations.at(i)->toString() << endl;
+    //}
+    //out << endl;
     
     /* Prints ending */
     out << "endmodule" << endl;
