@@ -13,7 +13,11 @@
 
 #include <string>
 
+#include "operation.h"
+
 using namespace std;
+
+class Operation;
 
 class Output {
 private:
@@ -26,6 +30,7 @@ public:
     int getWidth() { return dataWidth; }
     bool isUnsigned() { return usigned; }
     string toString();
+    Operation *fromOperation;
     int outCycle = -1;
 };
 

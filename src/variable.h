@@ -31,6 +31,7 @@ public:
     int getWidth() { return dataWidth; }
     bool isUnsigned() { return usigned; }
     string toString();
+    Operation *fromOperation;
     vector<Operation *> toOperations;
     int outCycle = -1;
 };

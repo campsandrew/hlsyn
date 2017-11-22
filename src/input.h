@@ -32,6 +32,7 @@ public:
     bool isUnsigned() { return usigned; }
     string toString();
     vector<Operation *> toOperations;
+    int outCycle = -1;
 };
 
 #endif /* input_h */

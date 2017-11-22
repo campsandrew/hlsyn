@@ -19,9 +19,6 @@
 #define INTERVAL_MAX 1
 #define INTERVAL_MIN 0
 
-class Variable;
-class Input;
-
 using namespace std;
 
 enum Operations {
@@ -39,6 +36,10 @@ enum Operations {
     INC,
     DEC
 };
+
+class Variable;
+class Input;
+class Output;
 
 class Operation {
 private:
