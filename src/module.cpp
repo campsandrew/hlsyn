@@ -717,45 +717,78 @@ void Module::getTypePropabilities(){
 //    double matrix_DivMod[res_DivMod.size()][Latency];
     for(int i = 0; i < res_AddSub.size(); i++){
         double prop = 1 / ((res_AddSub.at(i)->timeALAP - res_AddSub.at(i)->timeASAP) + 1);
-        res_AddSub.at(i)->operationProbability.push_back(prop);
         for(int j = 1; j <= Latency; j++){
             //matrix_AddSub[i][j] = 0;
             if(j >= res_AddSub.at(i)->timeASAP && j <= res_AddSub.at(i)->timeALAP){
                 //matrix_AddSub[i][j] = prop;
                 sum_AddSub[j - 1] += prop;
+                if ((res_AddSub.at(i)->timeALAP - res_AddSub.at(i)->timeASAP) != 0) {
+                    res_AddSub.at(i)->operationProbability.push_back(prop);
+                }
+                else {
+                    res_AddSub.at(i)->operationProbability.push_back(1);
+                }
+            }
+            else {
+                res_AddSub.at(i)->operationProbability.push_back(0);
             }
         }
     }
+    
     for(int i = 0; i < res_Mul.size(); i++){
         double prop = 1 / ((res_Mul.at(i)->timeALAP - res_Mul.at(i)->timeASAP) + 1);
-        res_Mul.at(i)->operationProbability.push_back(prop);
         for(int j = 1; j <= Latency; j++){
             //matrix_Mul[i][j] = 0;
             if(j >= res_Mul.at(i)->timeASAP && j <= res_Mul.at(i)->timeALAP){
                 //matrix_Mul[i][j] = prop;
                 sum_Mul[j - 1] += prop;
+                if ((res_Mul.at(i)->timeALAP - res_Mul.at(i)->timeASAP) != 0) {
+                    res_Mul.at(i)->operationProbability.push_back(prop);
+                }
+                else {
+                    res_Mul.at(i)->operationProbability.push_back(1);
+                }
+            }
+            else {
+                res_Mul.at(i)->operationProbability.push_back(0);
             }
         }
     }
     for(int i = 0; i < res_Logic.size(); i++){
         double prop = 1 / ((res_Logic.at(i)->timeALAP - res_Logic.at(i)->timeASAP) + 1);
-        res_Logic.at(i)->operationProbability.push_back(prop);
         for(int j = 1; j <= Latency; j++){
             //matrix_Logic[i][j] = 0;
             if(j >= res_Logic.at(i)->timeASAP && j <= res_Logic.at(i)->timeALAP){
                 //matrix_Logic[i][j] = prop;
                 sum_Logic[j - 1] += prop;
+                if ((res_Logic.at(i)->timeALAP - res_Logic.at(i)->timeASAP) != 0) {
+                    res_Logic.at(i)->operationProbability.push_back(prop);
+                }
+                else {
+                    res_Logic.at(i)->operationProbability.push_back(1);
+                }
+            }
+            else {
+                res_Logic.at(i)->operationProbability.push_back(0);
             }
         }
     }
     for(int i = 0; i < res_DivMod.size(); i++){
         double prop = 1 / ((res_DivMod.at(i)->timeALAP - res_DivMod.at(i)->timeASAP) + 1);
-        res_DivMod.at(i)->operationProbability.push_back(prop);
         for(int j = 1; j <= Latency; j++){
             //matrix_DivMod[i][j] = 0;
             if(j >= res_DivMod.at(i)->timeASAP && j <= res_DivMod.at(i)->timeALAP){
                 //matrix_DivMod[i][j] = prop;
                 sum_DivMod[j - 1] += prop;
+                if ((res_DivMod.at(i)->timeALAP - res_DivMod.at(i)->timeASAP) != 0) {
+                    res_DivMod.at(i)->operationProbability.push_back(prop);
+                }
+                else {
+                    res_DivMod.at(i)->operationProbability.push_back(1);
+                }
+            }
+            else {
+                res_DivMod.at(i)->operationProbability.push_back(0);
             }
         }
     }
@@ -814,7 +847,7 @@ void Module::getSelfForce() {
     }
     
     for (int i = 0; i < res_AddSub.size(); i++) {
-        for (int j = 0; j < res_AddSub.at(i)->operationProbability.size(); j++) {
+        for (int j = 0; j <= res_AddSub.at(i)->operationProbability.size(); j++) {
             tempSelfForce = 0;
             
             if (j >= res_AddSub.at(i)->timeASAP && j <= res_AddSub.at(i)->timeALAP) {
