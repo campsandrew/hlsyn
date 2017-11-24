@@ -661,6 +661,7 @@ bool Module::getALAPTimes() {
     return true;
 }
 
+<<<<<<< HEAD
 bool Module::getTypePropabilities(){
     vector<Operations *> res_AddSub;
     vector<Operations *> res_Mul;
@@ -671,6 +672,49 @@ bool Module::getTypePropabilities(){
     return true;
 }
 
+=======
+bool Module::fds() {
+    
+    if (!latencyCheck(Latency)) {
+        return false;
+    }
+    
+}
+
+/**
+ * Checks if the entered latency will meet the operation cycle delay.
+ */
+bool Module::latencyCheck(int latency) {
+    bool multiply = false, divide = false, etc = false, output = false;
+    int i = 0;
+    
+    for (i = 0; i < operations.size(); i++) {
+        if (operations.at(i)->getOperation() == MUL) {
+            multiply = true;
+        }
+        else if (operations.at(i)->getOperation() == DIV) {
+            divide = true;
+        }
+        else {
+            etc = true;
+        }
+    }
+    
+    if (etc) {
+        output = (latency < 1) ? false : true;
+    }
+    if (multiply) {
+        output = (latency < 2) ? false : true;
+    }
+    if (divide) {
+        output = (latency < 3) ? false : true;
+    }
+    
+    return output;
+}
+
+
+>>>>>>> ac45205e350f46a7ff20976efa71ad29915c3ea2
 /**
  * Delimeter function that splits a string at spaces and tabs and returns a vector of strings
  */
