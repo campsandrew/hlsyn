@@ -495,7 +495,12 @@ bool Module::getDataType(string type, int *size){
  *
  */
 bool Module::scheduleOperations() {
-    getASAPTimes();
+    
+    /* Calculate ASAP */
+    int handle = getASAPTimes();
+    if(!handle){
+        return false;
+    }
     
     /* Resets variables for calculating frames */
     for(auto &i : inputs){
@@ -504,7 +509,12 @@ bool Module::scheduleOperations() {
     for(auto &i : variables){
         i->outCycle = -1;
     }
-    getALAPTimes();
+    
+    /* Calculate ALAP */
+    handle = getALAPTimes();
+    if(!handle){
+        return false;
+    }
     
     return true;
 }
@@ -647,6 +657,16 @@ bool Module::getALAPTimes() {
             return false;
         }
     }
+    
+    return true;
+}
+
+bool Module::getTypePropabilities(){
+    vector<Operations *> res_AddSub;
+    vector<Operations *> res_Mul;
+    vector<Operations *> res_Logic;
+    vector<Operations *> res_DivMod;
+    
     
     return true;
 }
