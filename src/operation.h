@@ -18,7 +18,7 @@
 #define NUM_INPUTS 3
 #define INTERVAL_MAX 1
 #define INTERVAL_MIN 0
-#define NO_FORCE -1
+#define NO_FORCE -999
 
 using namespace std;
 

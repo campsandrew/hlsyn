@@ -847,14 +847,14 @@ void Module::getSelfForce() {
     }
     
     for (int i = 0; i < res_AddSub.size(); i++) {
-        for (int j = 0; j <= res_AddSub.at(i)->operationProbability.size(); j++) {
+        for (int j = 0; j < res_AddSub.at(i)->operationProbability.size(); j++) {
             tempSelfForce = 0;
             
-            if (j >= res_AddSub.at(i)->timeASAP && j <= res_AddSub.at(i)->timeALAP) {
+            if ((j + 1) >= res_AddSub.at(i)->timeASAP && (j + 1) <= res_AddSub.at(i)->timeALAP) {
                 currTemp = sum_AddSub.at(j) * (1 - res_AddSub.at(i)->operationProbability.at(j));
                 
                 for (int k = res_AddSub.at(i)->timeASAP; k <= res_AddSub.at(i)->timeALAP; k++) {
-                    tempSelfForce += (k != j) ? sum_AddSub.at(k) * (0 - res_AddSub.at(i)->operationProbability.at(k)) : currTemp;
+                    tempSelfForce += (k != (j + 1)) ? sum_AddSub.at(k) * (0 - res_AddSub.at(i)->operationProbability.at(k)) : currTemp;
                 }
                 
                 res_AddSub.at(i)->selfForce.at(i) = tempSelfForce;
@@ -866,11 +866,11 @@ void Module::getSelfForce() {
         for (int j = 0; j < res_DivMod.at(i)->operationProbability.size(); j++) {
             tempSelfForce = 0;
             
-            if (j >= res_DivMod.at(i)->timeASAP && j <= res_DivMod.at(i)->timeALAP) {
+            if ((j + 1) >= res_DivMod.at(i)->timeASAP && (j + 1) <= res_DivMod.at(i)->timeALAP) {
                 currTemp = sum_DivMod.at(j) * (1 - res_DivMod.at(i)->operationProbability.at(j));
                 
                 for (int k = res_DivMod.at(i)->timeASAP; k <= res_DivMod.at(i)->timeALAP; k++) {
-                    tempSelfForce += (k != j) ? sum_DivMod.at(k) * (0 - res_DivMod.at(i)->operationProbability.at(k)) : currTemp;
+                    tempSelfForce += (k != (j + 1)) ? sum_DivMod.at(k) * (0 - res_DivMod.at(i)->operationProbability.at(k)) : currTemp;
                 }
                 
                 res_DivMod.at(i)->selfForce.at(i) = tempSelfForce;
@@ -882,11 +882,11 @@ void Module::getSelfForce() {
         for (int j = 0; j < res_Mul.at(i)->operationProbability.size(); j++) {
             tempSelfForce = 0;
             
-            if (j >= res_Mul.at(i)->timeASAP && j <= res_Mul.at(i)->timeALAP) {
+            if ((j + 1) >= res_Mul.at(i)->timeASAP && (j + 1) <= res_Mul.at(i)->timeALAP) {
                 currTemp = sum_Mul.at(j) * (1 - res_Mul.at(i)->operationProbability.at(j));
                 
                 for (int k = res_Mul.at(i)->timeASAP; k <= res_Mul.at(i)->timeALAP; k++) {
-                    tempSelfForce += (k != j) ? sum_Mul.at(k) * (0 - res_Mul.at(i)->operationProbability.at(k)) : currTemp;
+                    tempSelfForce += (k != (j + 1)) ? sum_Mul.at(k) * (0 - res_Mul.at(i)->operationProbability.at(k)) : currTemp;
                 }
                 
                 res_Mul.at(i)->selfForce.at(i) = tempSelfForce;
