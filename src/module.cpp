@@ -522,6 +522,10 @@ bool Module::scheduleOperations() {
     /* Calculate self force */
     getSelfForce();
     
+    /* Calculate predecessor and successor forces */
+    getSuccessorForces();
+    getPredecessorForces();
+    
     return true;
 }
 
@@ -898,11 +902,11 @@ void Module::getSelfForce() {
         for (int j = 0; j < res_Logic.at(i)->operationProbability.size(); j++) {
             tempSelfForce = 0;
             
-            if (j >= res_Logic.at(i)->timeASAP && j <= res_Mul.at(i)->timeALAP) {
+            if ((j + 1) >= res_Logic.at(i)->timeASAP && (j + 1) <= res_Mul.at(i)->timeALAP) {
                 currTemp = sum_Logic.at(j) * (1 - res_Logic.at(i)->operationProbability.at(j));
                 
                 for (int k = res_Logic.at(i)->timeASAP; k <= res_Logic.at(i)->timeALAP; k++) {
-                    tempSelfForce += (k != j) ? sum_Logic.at(k) * (0 - res_Logic.at(i)->operationProbability.at(k)) : currTemp;
+                    tempSelfForce += (k != (j + 1)) ? sum_Logic.at(k) * (0 - res_Logic.at(i)->operationProbability.at(k)) : currTemp;
                 }
                 
                 res_Logic.at(i)->selfForce.at(i) = tempSelfForce;
@@ -911,6 +915,8 @@ void Module::getSelfForce() {
     }
     
 }
+
+
 
 /**
  * Delimeter function that splits a string at spaces and tabs and returns a vector of strings

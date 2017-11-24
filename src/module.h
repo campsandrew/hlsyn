@@ -46,6 +46,8 @@ private:
     bool getASAPTimes();
     void getTypePropabilities();
     void getSelfForce();
+    void getPredecessorForces();
+    void getSuccessorForces();
 public:
     Module(string name, int latency);
     string getName() { return name; }
