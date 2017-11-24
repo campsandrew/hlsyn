@@ -530,6 +530,13 @@ bool Module::scheduleOperations() {
     /* Calculate type propabilities */
     getTypePropabilities();
     
+    /* Calculate self force */
+    getSelfForce();
+    
+    /* Calculate predecessor and successor forces */
+    getSuccessorForces();
+    getPredecessorForces();
+    
     return true;
 }
 
@@ -730,9 +737,19 @@ void Module::getTypePropabilities(){
             if(j >= res_AddSub.at(i)->timeASAP && j <= res_AddSub.at(i)->timeALAP){
                 //matrix_AddSub[i][j] = prop;
                 sum_AddSub[j - 1] += prop;
+                if ((res_AddSub.at(i)->timeALAP - res_AddSub.at(i)->timeASAP) != 0) {
+                    res_AddSub.at(i)->operationProbability.push_back(prop);
+                }
+                else {
+                    res_AddSub.at(i)->operationProbability.push_back(1);
+                }
+            }
+            else {
+                res_AddSub.at(i)->operationProbability.push_back(0);
             }
         }
     }
+    
     for(int i = 0; i < res_Mul.size(); i++){
         double prop = 1 / ((res_Mul.at(i)->timeALAP - res_Mul.at(i)->timeASAP) + 1);
         for(int j = 1; j <= Latency; j++){
@@ -740,6 +757,15 @@ void Module::getTypePropabilities(){
             if(j >= res_Mul.at(i)->timeASAP && j <= res_Mul.at(i)->timeALAP){
                 //matrix_Mul[i][j] = prop;
                 sum_Mul[j - 1] += prop;
+                if ((res_Mul.at(i)->timeALAP - res_Mul.at(i)->timeASAP) != 0) {
+                    res_Mul.at(i)->operationProbability.push_back(prop);
+                }
+                else {
+                    res_Mul.at(i)->operationProbability.push_back(1);
+                }
+            }
+            else {
+                res_Mul.at(i)->operationProbability.push_back(0);
             }
         }
     }
@@ -750,6 +776,15 @@ void Module::getTypePropabilities(){
             if(j >= res_Logic.at(i)->timeASAP && j <= res_Logic.at(i)->timeALAP){
                 //matrix_Logic[i][j] = prop;
                 sum_Logic[j - 1] += prop;
+                if ((res_Logic.at(i)->timeALAP - res_Logic.at(i)->timeASAP) != 0) {
+                    res_Logic.at(i)->operationProbability.push_back(prop);
+                }
+                else {
+                    res_Logic.at(i)->operationProbability.push_back(1);
+                }
+            }
+            else {
+                res_Logic.at(i)->operationProbability.push_back(0);
             }
         }
     }
@@ -760,6 +795,15 @@ void Module::getTypePropabilities(){
             if(j >= res_DivMod.at(i)->timeASAP && j <= res_DivMod.at(i)->timeALAP){
                 //matrix_DivMod[i][j] = prop;
                 sum_DivMod[j - 1] += prop;
+                if ((res_DivMod.at(i)->timeALAP - res_DivMod.at(i)->timeASAP) != 0) {
+                    res_DivMod.at(i)->operationProbability.push_back(prop);
+                }
+                else {
+                    res_DivMod.at(i)->operationProbability.push_back(1);
+                }
+            }
+            else {
+                res_DivMod.at(i)->operationProbability.push_back(0);
             }
         }
     }
@@ -771,6 +815,119 @@ void Module::getTypePropabilities(){
         this->sum_DivMod.push_back(sum_DivMod[i]);
     }
 }
+
+void Module::getSelfForce() {
+    vector<Operation *> res_AddSub;
+    vector<Operation *> res_Mul;
+    vector<Operation *> res_Logic;
+    vector<Operation *> res_DivMod;
+    int tempSelfForce = 0, currTemp = 0;
+    
+    for(auto &i : operations){
+        switch(i->getOperation()){
+            case ADD:
+            case SUB:
+            case INC:
+            case DEC:
+                res_AddSub.push_back(i);
+                for (int j = 0; j < i->operationProbability.size(); j++) {
+                    i->selfForce.push_back(NO_FORCE);
+                }
+                break;
+            case MUL:
+                res_Mul.push_back(i);
+                for (int j = 0; j < i->operationProbability.size(); j++) {
+                    i->selfForce.push_back(NO_FORCE);
+                }
+                break;
+            case DIV:
+            case MOD:
+                res_DivMod.push_back(i);
+                for (int j = 0; j < i->operationProbability.size(); j++) {
+                    i->selfForce.push_back(NO_FORCE);
+                }
+                break;
+            case COMP_EQ:
+            case COMP_GT:
+            case COMP_LT:
+            case MUX2x1:
+            case SHL:
+            case SHR:
+                res_Logic.push_back(i);
+                for (int j = 0; j < i->operationProbability.size(); j++) {
+                    i->selfForce.push_back(NO_FORCE);
+                }
+                break;
+        }
+    }
+    
+    for (int i = 0; i < res_AddSub.size(); i++) {
+        for (int j = 0; j < res_AddSub.at(i)->operationProbability.size(); j++) {
+            tempSelfForce = 0;
+            
+            if ((j + 1) >= res_AddSub.at(i)->timeASAP && (j + 1) <= res_AddSub.at(i)->timeALAP) {
+                currTemp = sum_AddSub.at(j) * (1 - res_AddSub.at(i)->operationProbability.at(j));
+                
+                for (int k = res_AddSub.at(i)->timeASAP; k <= res_AddSub.at(i)->timeALAP; k++) {
+                    tempSelfForce += (k != (j + 1)) ? sum_AddSub.at(k) * (0 - res_AddSub.at(i)->operationProbability.at(k)) : currTemp;
+                }
+                
+                res_AddSub.at(i)->selfForce.at(i) = tempSelfForce;
+            }
+        }
+    }
+    
+    for (int i = 0; i < res_DivMod.size(); i++) {
+        for (int j = 0; j < res_DivMod.at(i)->operationProbability.size(); j++) {
+            tempSelfForce = 0;
+            
+            if ((j + 1) >= res_DivMod.at(i)->timeASAP && (j + 1) <= res_DivMod.at(i)->timeALAP) {
+                currTemp = sum_DivMod.at(j) * (1 - res_DivMod.at(i)->operationProbability.at(j));
+                
+                for (int k = res_DivMod.at(i)->timeASAP; k <= res_DivMod.at(i)->timeALAP; k++) {
+                    tempSelfForce += (k != (j + 1)) ? sum_DivMod.at(k) * (0 - res_DivMod.at(i)->operationProbability.at(k)) : currTemp;
+                }
+                
+                res_DivMod.at(i)->selfForce.at(i) = tempSelfForce;
+            }
+        }
+    }
+    
+    for (int i = 0; i < res_Mul.size(); i++) {
+        for (int j = 0; j < res_Mul.at(i)->operationProbability.size(); j++) {
+            tempSelfForce = 0;
+            
+            if ((j + 1) >= res_Mul.at(i)->timeASAP && (j + 1) <= res_Mul.at(i)->timeALAP) {
+                currTemp = sum_Mul.at(j) * (1 - res_Mul.at(i)->operationProbability.at(j));
+                
+                for (int k = res_Mul.at(i)->timeASAP; k <= res_Mul.at(i)->timeALAP; k++) {
+                    tempSelfForce += (k != (j + 1)) ? sum_Mul.at(k) * (0 - res_Mul.at(i)->operationProbability.at(k)) : currTemp;
+                }
+                
+                res_Mul.at(i)->selfForce.at(i) = tempSelfForce;
+            }
+        }
+    }
+    
+    for (int i = 0; i < res_Logic.size(); i++) {
+        for (int j = 0; j < res_Logic.at(i)->operationProbability.size(); j++) {
+            tempSelfForce = 0;
+            
+            if ((j + 1) >= res_Logic.at(i)->timeASAP && (j + 1) <= res_Mul.at(i)->timeALAP) {
+                currTemp = sum_Logic.at(j) * (1 - res_Logic.at(i)->operationProbability.at(j));
+                
+                for (int k = res_Logic.at(i)->timeASAP; k <= res_Logic.at(i)->timeALAP; k++) {
+                    tempSelfForce += (k != (j + 1)) ? sum_Logic.at(k) * (0 - res_Logic.at(i)->operationProbability.at(k)) : currTemp;
+                }
+                
+                res_Logic.at(i)->selfForce.at(i) = tempSelfForce;
+            }
+        }
+    }
+    
+}
+
+
 
 /**
  * Delimeter function that splits a string at spaces and tabs and returns a vector of strings
