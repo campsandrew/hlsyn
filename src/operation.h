@@ -18,6 +18,7 @@
 #define NUM_INPUTS 3
 #define INTERVAL_MAX 1
 #define INTERVAL_MIN 0
+#define NO_FORCE -1
 
 using namespace std;
 
@@ -65,6 +66,11 @@ public:
     Input *inInput[NUM_INPUTS];
     int timeASAP = -1;
     int timeALAP = -1;
+    std::vector<double> operationProbability;
+    std::vector<double> selfForce;
+    std::vector<double> predecessorForce;
+    std::vector<double> sucessorForce;
+    std::vector<double> totalForce;
 };
 
 #endif /* operation_h */

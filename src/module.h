@@ -45,6 +45,7 @@ private:
     bool getALAPTimes();
     bool getASAPTimes();
     void getTypePropabilities();
+    void getSelfForce();
 public:
     Module(string name, int latency);
     string getName() { return name; }
