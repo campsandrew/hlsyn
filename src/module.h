@@ -44,19 +44,21 @@ private:
     bool scheduleOperations();
     bool getALAPTimes();
     bool getASAPTimes();
-    bool getTypePropabilities();
+    void getTypePropabilities();
 public:
     Module(string name, int latency);
     string getName() { return name; }
     int getLatency() { return Latency; }
-    bool fds();
     bool build_module(string file);    /* Builds the data path graph */
-    bool latencyCheck(int latency);
-    bool output_module(string file);                                            /* Prints the module in .v format */
+    bool output_module(string file);   /* Prints the module in .v format */
     vector<Operation *> operations;
     vector<Output *> outputs;
     vector<Input *> inputs;
     vector<Variable *> variables;
+    vector<double> sum_AddSub;
+    vector<double> sum_Mul;
+    vector<double> sum_Logic;
+    vector<double> sum_DivMod;
 };
 
 #endif /* module_h */

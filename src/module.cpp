@@ -516,6 +516,9 @@ bool Module::scheduleOperations() {
         return false;
     }
     
+    /* Calculate type propabilities */
+    getTypePropabilities();
+    
     return true;
 }
 
@@ -661,60 +664,103 @@ bool Module::getALAPTimes() {
     return true;
 }
 
-<<<<<<< HEAD
-bool Module::getTypePropabilities(){
-    vector<Operations *> res_AddSub;
-    vector<Operations *> res_Mul;
-    vector<Operations *> res_Logic;
-    vector<Operations *> res_DivMod;
+void Module::getTypePropabilities(){
+    vector<Operation *> res_AddSub;
+    vector<Operation *> res_Mul;
+    vector<Operation *> res_Logic;
+    vector<Operation *> res_DivMod;
     
-    
-    return true;
-}
-
-=======
-bool Module::fds() {
-    
-    if (!latencyCheck(Latency)) {
-        return false;
-    }
-    
-}
-
-/**
- * Checks if the entered latency will meet the operation cycle delay.
- */
-bool Module::latencyCheck(int latency) {
-    bool multiply = false, divide = false, etc = false, output = false;
-    int i = 0;
-    
-    for (i = 0; i < operations.size(); i++) {
-        if (operations.at(i)->getOperation() == MUL) {
-            multiply = true;
-        }
-        else if (operations.at(i)->getOperation() == DIV) {
-            divide = true;
-        }
-        else {
-            etc = true;
+    for(auto &i : operations){
+        switch(i->getOperation()){
+            case ADD:
+            case SUB:
+            case INC:
+            case DEC:
+                res_AddSub.push_back(i);
+                break;
+            case MUL:
+                res_Mul.push_back(i);
+                break;
+            case DIV:
+            case MOD:
+                res_DivMod.push_back(i);
+                break;
+            case COMP_EQ:
+            case COMP_GT:
+            case COMP_LT:
+            case MUX2x1:
+            case SHL:
+            case SHR:
+                res_Logic.push_back(i);
+                break;
         }
     }
     
-    if (etc) {
-        output = (latency < 1) ? false : true;
-    }
-    if (multiply) {
-        output = (latency < 2) ? false : true;
-    }
-    if (divide) {
-        output = (latency < 3) ? false : true;
+    /* Adds the propabilities to sum matrix */
+    double sum_AddSub[Latency];
+    double sum_Mul[Latency];
+    double sum_Logic[Latency];
+    double sum_DivMod[Latency];
+    for(int i = 0; i < Latency; i++){
+        sum_AddSub[i] = 0;
+        sum_Mul[i] = 0;
+        sum_Logic[i] = 0;
+        sum_DivMod[i] = 0;
     }
     
-    return output;
+//    double matrix_AddSub[res_AddSub.size()][Latency];
+//    double matrix_Mul[res_Mul.size()][Latency];
+//    double matrix_Logic[res_Logic.size()][Latency];
+//    double matrix_DivMod[res_DivMod.size()][Latency];
+    for(int i = 0; i < res_AddSub.size(); i++){
+        double prop = 1 / ((res_AddSub.at(i)->timeALAP - res_AddSub.at(i)->timeASAP) + 1);
+        for(int j = 1; j <= Latency; j++){
+            //matrix_AddSub[i][j] = 0;
+            if(j >= res_AddSub.at(i)->timeASAP && j <= res_AddSub.at(i)->timeALAP){
+                //matrix_AddSub[i][j] = prop;
+                sum_AddSub[j - 1] += prop;
+            }
+        }
+    }
+    for(int i = 0; i < res_Mul.size(); i++){
+        double prop = 1 / ((res_Mul.at(i)->timeALAP - res_Mul.at(i)->timeASAP) + 1);
+        for(int j = 1; j <= Latency; j++){
+            //matrix_Mul[i][j] = 0;
+            if(j >= res_Mul.at(i)->timeASAP && j <= res_Mul.at(i)->timeALAP){
+                //matrix_Mul[i][j] = prop;
+                sum_Mul[j - 1] += prop;
+            }
+        }
+    }
+    for(int i = 0; i < res_Logic.size(); i++){
+        double prop = 1 / ((res_Logic.at(i)->timeALAP - res_Logic.at(i)->timeASAP) + 1);
+        for(int j = 1; j <= Latency; j++){
+            //matrix_Logic[i][j] = 0;
+            if(j >= res_Logic.at(i)->timeASAP && j <= res_Logic.at(i)->timeALAP){
+                //matrix_Logic[i][j] = prop;
+                sum_Logic[j - 1] += prop;
+            }
+        }
+    }
+    for(int i = 0; i < res_DivMod.size(); i++){
+        double prop = 1 / ((res_DivMod.at(i)->timeALAP - res_DivMod.at(i)->timeASAP) + 1);
+        for(int j = 1; j <= Latency; j++){
+            //matrix_DivMod[i][j] = 0;
+            if(j >= res_DivMod.at(i)->timeASAP && j <= res_DivMod.at(i)->timeALAP){
+                //matrix_DivMod[i][j] = prop;
+                sum_DivMod[j - 1] += prop;
+            }
+        }
+    }
+    
+    for(int i = 0; i < Latency; i++){
+        this->sum_AddSub.push_back(sum_AddSub[i]);
+        this->sum_Mul.push_back(sum_Mul[i]);
+        this->sum_Logic.push_back(sum_Logic[i]);
+        this->sum_DivMod.push_back(sum_DivMod[i]);
+    }
 }
 
-
->>>>>>> ac45205e350f46a7ff20976efa71ad29915c3ea2
 /**
  * Delimeter function that splits a string at spaces and tabs and returns a vector of strings
  */
