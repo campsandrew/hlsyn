@@ -69,7 +69,7 @@ public:
     std::vector<double> operationProbability;
     std::vector<double> selfForce;
     std::vector<double> predecessorForce;
-    std::vector<double> sucessorForce;
+    std::vector<double> successorForce;
     std::vector<double> totalForce;
 };
 

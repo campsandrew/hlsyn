@@ -812,6 +812,7 @@ void Module::getSelfForce() {
     vector<Operation *> res_DivMod;
     int tempSelfForce = 0, currTemp = 0;
     
+    /* Generating individual operation vectors and initializing self force vectors for each operation */
     for(auto &i : operations){
         switch(i->getOperation()){
             case ADD:
@@ -850,14 +851,18 @@ void Module::getSelfForce() {
         }
     }
     
+    /* Self force calculation for ADD and SUB operations */
     for (int i = 0; i < res_AddSub.size(); i++) {
         for (int j = 0; j < res_AddSub.at(i)->operationProbability.size(); j++) {
             tempSelfForce = 0;
             
+            /* If current time fits within ASAP and ALAP time frames, continue */
             if ((j + 1) >= res_AddSub.at(i)->timeASAP && (j + 1) <= res_AddSub.at(i)->timeALAP) {
+                /* Create temporary partial equation for self force */
                 currTemp = sum_AddSub.at(j) * (1 - res_AddSub.at(i)->operationProbability.at(j));
                 
                 for (int k = res_AddSub.at(i)->timeASAP; k <= res_AddSub.at(i)->timeALAP; k++) {
+                    
                     tempSelfForce += (k != (j + 1)) ? sum_AddSub.at(k) * (0 - res_AddSub.at(i)->operationProbability.at(k)) : currTemp;
                 }
                 
@@ -866,6 +871,7 @@ void Module::getSelfForce() {
         }
     }
     
+    /* Self force calculation for DIV and MOD operations */
     for (int i = 0; i < res_DivMod.size(); i++) {
         for (int j = 0; j < res_DivMod.at(i)->operationProbability.size(); j++) {
             tempSelfForce = 0;
@@ -882,6 +888,7 @@ void Module::getSelfForce() {
         }
     }
     
+    /* Self force calculation for MUL operations */
     for (int i = 0; i < res_Mul.size(); i++) {
         for (int j = 0; j < res_Mul.at(i)->operationProbability.size(); j++) {
             tempSelfForce = 0;
@@ -898,6 +905,7 @@ void Module::getSelfForce() {
         }
     }
     
+    /* Self force calculation for logic operations */
     for (int i = 0; i < res_Logic.size(); i++) {
         for (int j = 0; j < res_Logic.at(i)->operationProbability.size(); j++) {
             tempSelfForce = 0;
@@ -916,7 +924,73 @@ void Module::getSelfForce() {
     
 }
 
+void Module::getSuccessorForces() {
+    vector<Operation *> res_AddSub;
+    vector<Operation *> res_Mul;
+    vector<Operation *> res_Logic;
+    vector<Operation *> res_DivMod;
+    
+    /* Generating individual operation vectors and intializing successor forc*/
+    for(auto &i : operations){
+        switch(i->getOperation()){
+            case ADD:
+            case SUB:
+            case INC:
+            case DEC:
+                res_AddSub.push_back(i);
+                for (int j = 0; j < i->operationProbability.size(); j++) {
+                    i->successorForce.push_back(0);
+                }
+                break;
+            case MUL:
+                res_Mul.push_back(i);
+                for (int j = 0; j < i->operationProbability.size(); j++) {
+                    i->successorForce.push_back(0);
+                }
+                break;
+            case DIV:
+            case MOD:
+                res_DivMod.push_back(i);
+                for (int j = 0; j < i->operationProbability.size(); j++) {
+                    i->successorForce.push_back(0);
+                }
+                break;
+            case COMP_EQ:
+            case COMP_GT:
+            case COMP_LT:
+            case MUX2x1:
+            case SHL:
+            case SHR:
+                res_Logic.push_back(i);
+                for (int j = 0; j < i->operationProbability.size(); j++) {
+                    i->successorForce.push_back(0);
+                }
+                break;
+        }
+    }
+    
+    /* Successor force generation for ADD and SUB operations */
+    for (int i = 0; i < res_AddSub.size(); i++) {
+        /* If successor node exists, proceed with generation, otherwise no force is generated */
+        if (res_AddSub.at(i)->outNext != NULL) {
+            for (int j = res_AddSub.at(i)->timeASAP; j <= res_AddSub.at(i)->timeALAP; j++) {
+                
+            }
+        }
+        Variable *varTemp = res_AddSub.at(i)->varNext;
+        if (varTemp != NULL) {
+            exploreVar(res_AddSub, i);
+        }
+    }
+}
 
+void Module::exploreVar(vector<Operation *> operationVector, int count) {
+    
+}
+
+void Module::getPredecessorForces() {
+    
+}
 
 /**
  * Delimeter function that splits a string at spaces and tabs and returns a vector of strings
