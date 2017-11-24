@@ -438,6 +438,17 @@ bool Module::output_module(string file) {
     //}
     //out << endl;
     
+    /* Prints Rst and state transition block */
+    out << "\talways @(posedge Clk) begin" << endl;
+    out << "\t\tif(Rst) begin" << endl;
+    out << "\t\t\tState <= Wait;" << endl;
+    //TODO: Set all regs to 0
+    out << "\t\tend" << endl;
+    out << "\t\telse begin" << endl;
+    out << "\t\t\tState <= StateNext;" << endl;
+    out << "\t\tend" << endl;
+    out << "\t" << endl;
+    
     /* Prints ending */
     out << "endmodule" << endl;
     out.close();
