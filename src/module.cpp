@@ -534,8 +534,8 @@ bool Module::scheduleOperations() {
     getSelfForce();
     
     /* Calculate predecessor and successor forces */
-    getSuccessorForces();
-    getPredecessorForces();
+    //getSuccessorForces();
+    //getPredecessorForces();
     
     return true;
 }
@@ -682,6 +682,9 @@ bool Module::getALAPTimes() {
     return true;
 }
 
+/**
+ *
+ */
 void Module::getTypePropabilities(){
     vector<Operation *> res_AddSub;
     vector<Operation *> res_Mul;
@@ -715,219 +718,114 @@ void Module::getTypePropabilities(){
     }
     
     /* Adds the propabilities to sum matrix */
-    double sum_AddSub[Latency];
-    double sum_Mul[Latency];
-    double sum_Logic[Latency];
-    double sum_DivMod[Latency];
     for(int i = 0; i < Latency; i++){
-        sum_AddSub[i] = 0;
-        sum_Mul[i] = 0;
-        sum_Logic[i] = 0;
-        sum_DivMod[i] = 0;
+        sum_AddSub.push_back(0);
+        sum_Mul.push_back(0);
+        sum_Logic.push_back(0);
+        sum_DivMod.push_back(0);
     }
     
-//    double matrix_AddSub[res_AddSub.size()][Latency];
-//    double matrix_Mul[res_Mul.size()][Latency];
-//    double matrix_Logic[res_Logic.size()][Latency];
-//    double matrix_DivMod[res_DivMod.size()][Latency];
     for(int i = 0; i < res_AddSub.size(); i++){
-        double prop = 1 / ((res_AddSub.at(i)->timeALAP - res_AddSub.at(i)->timeASAP) + 1);
+        double prop = 1.0 / ((res_AddSub.at(i)->timeALAP - res_AddSub.at(i)->timeASAP) + 1.0);
         for(int j = 1; j <= Latency; j++){
-            //matrix_AddSub[i][j] = 0;
             if(j >= res_AddSub.at(i)->timeASAP && j <= res_AddSub.at(i)->timeALAP){
-                //matrix_AddSub[i][j] = prop;
-                sum_AddSub[j - 1] += prop;
-                if ((res_AddSub.at(i)->timeALAP - res_AddSub.at(i)->timeASAP) != 0) {
-                    res_AddSub.at(i)->operationProbability.push_back(prop);
-                }
-                else {
-                    res_AddSub.at(i)->operationProbability.push_back(1);
-                }
-            }
-            else {
-                res_AddSub.at(i)->operationProbability.push_back(0);
+                sum_AddSub.at(j - 1) += prop;
             }
         }
     }
     
     for(int i = 0; i < res_Mul.size(); i++){
-        double prop = 1 / ((res_Mul.at(i)->timeALAP - res_Mul.at(i)->timeASAP) + 1);
+        double prop = 1.0 / ((res_Mul.at(i)->timeALAP - res_Mul.at(i)->timeASAP) + 1.0);
         for(int j = 1; j <= Latency; j++){
-            //matrix_Mul[i][j] = 0;
             if(j >= res_Mul.at(i)->timeASAP && j <= res_Mul.at(i)->timeALAP){
-                //matrix_Mul[i][j] = prop;
-                sum_Mul[j - 1] += prop;
-                if ((res_Mul.at(i)->timeALAP - res_Mul.at(i)->timeASAP) != 0) {
-                    res_Mul.at(i)->operationProbability.push_back(prop);
-                }
-                else {
-                    res_Mul.at(i)->operationProbability.push_back(1);
-                }
-            }
-            else {
-                res_Mul.at(i)->operationProbability.push_back(0);
+                sum_Mul.at(j - 1) += prop;
             }
         }
     }
     for(int i = 0; i < res_Logic.size(); i++){
-        double prop = 1 / ((res_Logic.at(i)->timeALAP - res_Logic.at(i)->timeASAP) + 1);
+        double prop = 1.0 / ((res_Logic.at(i)->timeALAP - res_Logic.at(i)->timeASAP) + 1.0);
         for(int j = 1; j <= Latency; j++){
-            //matrix_Logic[i][j] = 0;
             if(j >= res_Logic.at(i)->timeASAP && j <= res_Logic.at(i)->timeALAP){
-                //matrix_Logic[i][j] = prop;
-                sum_Logic[j - 1] += prop;
-                if ((res_Logic.at(i)->timeALAP - res_Logic.at(i)->timeASAP) != 0) {
-                    res_Logic.at(i)->operationProbability.push_back(prop);
-                }
-                else {
-                    res_Logic.at(i)->operationProbability.push_back(1);
-                }
-            }
-            else {
-                res_Logic.at(i)->operationProbability.push_back(0);
+                sum_Logic.at(j - 1) += prop;
             }
         }
     }
     for(int i = 0; i < res_DivMod.size(); i++){
-        double prop = 1 / ((res_DivMod.at(i)->timeALAP - res_DivMod.at(i)->timeASAP) + 1);
+        double prop = 1.0 / ((res_DivMod.at(i)->timeALAP - res_DivMod.at(i)->timeASAP) + 1.0);
         for(int j = 1; j <= Latency; j++){
-            //matrix_DivMod[i][j] = 0;
             if(j >= res_DivMod.at(i)->timeASAP && j <= res_DivMod.at(i)->timeALAP){
-                //matrix_DivMod[i][j] = prop;
-                sum_DivMod[j - 1] += prop;
-                if ((res_DivMod.at(i)->timeALAP - res_DivMod.at(i)->timeASAP) != 0) {
-                    res_DivMod.at(i)->operationProbability.push_back(prop);
-                }
-                else {
-                    res_DivMod.at(i)->operationProbability.push_back(1);
-                }
-            }
-            else {
-                res_DivMod.at(i)->operationProbability.push_back(0);
+                sum_DivMod.at(j - 1) += prop;
             }
         }
     }
-    
-    for(int i = 0; i < Latency; i++){
-        this->sum_AddSub.push_back(sum_AddSub[i]);
-        this->sum_Mul.push_back(sum_Mul[i]);
-        this->sum_Logic.push_back(sum_Logic[i]);
-        this->sum_DivMod.push_back(sum_DivMod[i]);
-    }
 }
 
+/**
+ *
+ */
 void Module::getSelfForce() {
-    vector<Operation *> res_AddSub;
-    vector<Operation *> res_Mul;
-    vector<Operation *> res_Logic;
-    vector<Operation *> res_DivMod;
-    int tempSelfForce = 0, currTemp = 0;
     
-    for(auto &i : operations){
-        switch(i->getOperation()){
-            case ADD:
-            case SUB:
-            case INC:
-            case DEC:
-                res_AddSub.push_back(i);
-                for (int j = 0; j < i->operationProbability.size(); j++) {
-                    i->selfForce.push_back(NO_FORCE);
+    /* Get the self forces at each time in nodes time frame */
+    for(int i = 1; i <= Latency; i++){
+        for(int j = 0; j < operations.size(); j++){
+            double selfForce = 0;
+            double prop = 1.0 / ((operations.at(j)->timeALAP - operations.at(j)->timeASAP) + 1.0);
+            if(i >= operations.at(j)->timeASAP && i <= operations.at(j)->timeALAP){
+                switch(operations.at(j)->getOperation()){
+                    case ADD:
+                    case SUB:
+                    case INC:
+                    case DEC:
+                        for(int k = operations.at(j)->timeASAP; k <= operations.at(j)->timeALAP; k++){
+                            if(i == k){
+                                selfForce += sum_AddSub.at(k - 1) * (1 - prop);
+                            }else{
+                                selfForce += sum_AddSub.at(k - 1) * (0 - prop);
+                            }
+                        }
+                        break;
+                    case MUL:
+                        for(int k = operations.at(j)->timeASAP; k <= operations.at(j)->timeALAP; k++){
+                            if(i == k){
+                                selfForce += sum_Mul.at(k - 1) * (1 - prop);
+                            }else{
+                                selfForce += sum_Mul.at(k - 1) * (0 - prop);
+                            }
+                        }
+                        break;
+                    case DIV:
+                    case MOD:
+                        for(int k = operations.at(j)->timeASAP; k <= operations.at(j)->timeALAP; k++){
+                            if(i == k){
+                                selfForce += sum_DivMod.at(k - 1) * (1 - prop);
+                            }else{
+                                selfForce += sum_DivMod.at(k - 1) * (0 - prop);
+                            }
+                        }
+                        break;
+                    case COMP_EQ:
+                    case COMP_GT:
+                    case COMP_LT:
+                    case MUX2x1:
+                    case SHL:
+                    case SHR:
+                        for(int k = operations.at(j)->timeASAP; k <= operations.at(j)->timeALAP; k++){
+                            if(i == k){
+                                selfForce += sum_Logic.at(k - 1) * (1 - prop);
+                            }else{
+                                selfForce += sum_Logic.at(k - 1) * (0 - prop);
+                            }
+                        }
+                        break;
                 }
-                break;
-            case MUL:
-                res_Mul.push_back(i);
-                for (int j = 0; j < i->operationProbability.size(); j++) {
-                    i->selfForce.push_back(NO_FORCE);
-                }
-                break;
-            case DIV:
-            case MOD:
-                res_DivMod.push_back(i);
-                for (int j = 0; j < i->operationProbability.size(); j++) {
-                    i->selfForce.push_back(NO_FORCE);
-                }
-                break;
-            case COMP_EQ:
-            case COMP_GT:
-            case COMP_LT:
-            case MUX2x1:
-            case SHL:
-            case SHR:
-                res_Logic.push_back(i);
-                for (int j = 0; j < i->operationProbability.size(); j++) {
-                    i->selfForce.push_back(NO_FORCE);
-                }
-                break;
-        }
-    }
-    
-    for (int i = 0; i < res_AddSub.size(); i++) {
-        for (int j = 0; j < res_AddSub.at(i)->operationProbability.size(); j++) {
-            tempSelfForce = 0;
-            
-            if ((j + 1) >= res_AddSub.at(i)->timeASAP && (j + 1) <= res_AddSub.at(i)->timeALAP) {
-                currTemp = sum_AddSub.at(j) * (1 - res_AddSub.at(i)->operationProbability.at(j));
                 
-                for (int k = res_AddSub.at(i)->timeASAP; k <= res_AddSub.at(i)->timeALAP; k++) {
-                    tempSelfForce += (k != (j + 1)) ? sum_AddSub.at(k) * (0 - res_AddSub.at(i)->operationProbability.at(k)) : currTemp;
-                }
-                
-                res_AddSub.at(i)->selfForce.at(i) = tempSelfForce;
+                operations.at(j)->selfForce.push_back(selfForce);
             }
         }
     }
     
-    for (int i = 0; i < res_DivMod.size(); i++) {
-        for (int j = 0; j < res_DivMod.at(i)->operationProbability.size(); j++) {
-            tempSelfForce = 0;
-            
-            if ((j + 1) >= res_DivMod.at(i)->timeASAP && (j + 1) <= res_DivMod.at(i)->timeALAP) {
-                currTemp = sum_DivMod.at(j) * (1 - res_DivMod.at(i)->operationProbability.at(j));
-                
-                for (int k = res_DivMod.at(i)->timeASAP; k <= res_DivMod.at(i)->timeALAP; k++) {
-                    tempSelfForce += (k != (j + 1)) ? sum_DivMod.at(k) * (0 - res_DivMod.at(i)->operationProbability.at(k)) : currTemp;
-                }
-                
-                res_DivMod.at(i)->selfForce.at(i) = tempSelfForce;
-            }
-        }
-    }
-    
-    for (int i = 0; i < res_Mul.size(); i++) {
-        for (int j = 0; j < res_Mul.at(i)->operationProbability.size(); j++) {
-            tempSelfForce = 0;
-            
-            if ((j + 1) >= res_Mul.at(i)->timeASAP && (j + 1) <= res_Mul.at(i)->timeALAP) {
-                currTemp = sum_Mul.at(j) * (1 - res_Mul.at(i)->operationProbability.at(j));
-                
-                for (int k = res_Mul.at(i)->timeASAP; k <= res_Mul.at(i)->timeALAP; k++) {
-                    tempSelfForce += (k != (j + 1)) ? sum_Mul.at(k) * (0 - res_Mul.at(i)->operationProbability.at(k)) : currTemp;
-                }
-                
-                res_Mul.at(i)->selfForce.at(i) = tempSelfForce;
-            }
-        }
-    }
-    
-    for (int i = 0; i < res_Logic.size(); i++) {
-        for (int j = 0; j < res_Logic.at(i)->operationProbability.size(); j++) {
-            tempSelfForce = 0;
-            
-            if ((j + 1) >= res_Logic.at(i)->timeASAP && (j + 1) <= res_Mul.at(i)->timeALAP) {
-                currTemp = sum_Logic.at(j) * (1 - res_Logic.at(i)->operationProbability.at(j));
-                
-                for (int k = res_Logic.at(i)->timeASAP; k <= res_Logic.at(i)->timeALAP; k++) {
-                    tempSelfForce += (k != (j + 1)) ? sum_Logic.at(k) * (0 - res_Logic.at(i)->operationProbability.at(k)) : currTemp;
-                }
-                
-                res_Logic.at(i)->selfForce.at(i) = tempSelfForce;
-            }
-        }
-    }
-    
+    cout << "here" << endl;
 }
-
-
 
 /**
  * Delimeter function that splits a string at spaces and tabs and returns a vector of strings

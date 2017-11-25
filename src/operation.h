@@ -66,11 +66,10 @@ public:
     Input *inInput[NUM_INPUTS];
     int timeASAP = -1;
     int timeALAP = -1;
-    std::vector<double> operationProbability;
-    std::vector<double> selfForce;
-    std::vector<double> predecessorForce;
-    std::vector<double> sucessorForce;
-    std::vector<double> totalForce;
+    vector<double> selfForce;
+    vector<double> predecessorForce;
+    vector<double> sucessorForce;
+    vector<double> totalForce;
 };
 
 #endif /* operation_h */
