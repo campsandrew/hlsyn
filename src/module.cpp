@@ -513,7 +513,7 @@ bool Module::scheduleOperations() {
         if(!getTimeFrames(unscheduled)){
             return false;
         }
-        getTypePropabilities(unscheduled);
+        getTypePropabilities();
         getTotalForces(unscheduled);
         scheduleNode(unscheduled); // Removes scheduled node
     }
@@ -600,7 +600,7 @@ bool Module::getASAPTimes(vector<Operation *> nodes) {
             if(inCyclesCalculated){
                 
                 /* Pass delay of operation output */
-                nodes.at(i)->timeASAP = maxInCycle + 1;
+                nodes.at(i)->frame.min = maxInCycle + 1;
                 tempCycle = maxInCycle + nodes.at(i)->getCycleDelay();
                 if(nodes.at(i)->varNext != NULL){
                     nodes.at(i)->varNext->outCycle = tempCycle;
@@ -664,7 +664,7 @@ bool Module::getALAPTimes(vector<Operation *> nodes) {
                     cout << "ERROR: Not enough cycles to schedule graph" << endl;
                     return false;
                 }
-                nodes.at(i)->timeALAP = tempCycle;
+                nodes.at(i)->frame.max = tempCycle;
                 for(int j = 0; j < NUM_INPUTS; j++){
                     if(nodes.at(i)->inVar[j] != NULL){
                         nodes.at(i)->inVar[j]->outCycle = tempCycle;
@@ -699,7 +699,7 @@ bool Module::getALAPTimes(vector<Operation *> nodes) {
 /**
  *
  */
-void Module::getTypePropabilities(vector<Operation *> nodes){
+void Module::getTypePropabilities(){
     vector<Operation *> res_AddSub;
     vector<Operation *> res_Mul;
     vector<Operation *> res_Logic;
@@ -744,34 +744,34 @@ void Module::getTypePropabilities(vector<Operation *> nodes){
     }
     
     for(int i = 0; i < res_AddSub.size(); i++){
-        double prop = 1.0 / ((res_AddSub.at(i)->timeALAP - res_AddSub.at(i)->timeASAP) + 1.0);
+        double prop = 1.0 / (double)res_AddSub.at(i)->frame.getWidth();
         for(int j = 1; j <= Latency; j++){
-            if(j >= res_AddSub.at(i)->timeASAP && j <= res_AddSub.at(i)->timeALAP){
+            if(j >= res_AddSub.at(i)->frame.min && j <= res_AddSub.at(i)->frame.max){
                 sum_AddSub.at(j - 1) += prop;
             }
         }
     }
     
     for(int i = 0; i < res_Mul.size(); i++){
-        double prop = 1.0 / ((res_Mul.at(i)->timeALAP - res_Mul.at(i)->timeASAP) + 1.0);
+        double prop = 1.0 / (double)res_Mul.at(i)->frame.getWidth();
         for(int j = 1; j <= Latency; j++){
-            if(j >= res_Mul.at(i)->timeASAP && j <= res_Mul.at(i)->timeALAP){
+            if(j >= res_Mul.at(i)->frame.min && j <= res_Mul.at(i)->frame.max){
                 sum_Mul.at(j - 1) += prop;
             }
         }
     }
     for(int i = 0; i < res_Logic.size(); i++){
-        double prop = 1.0 / ((res_Logic.at(i)->timeALAP - res_Logic.at(i)->timeASAP) + 1.0);
+        double prop = 1.0 / (double)res_Logic.at(i)->frame.getWidth();
         for(int j = 1; j <= Latency; j++){
-            if(j >= res_Logic.at(i)->timeASAP && j <= res_Logic.at(i)->timeALAP){
+            if(j >= res_Logic.at(i)->frame.min && j <= res_Logic.at(i)->frame.max){
                 sum_Logic.at(j - 1) += prop;
             }
         }
     }
     for(int i = 0; i < res_DivMod.size(); i++){
-        double prop = 1.0 / ((res_DivMod.at(i)->timeALAP - res_DivMod.at(i)->timeASAP) + 1.0);
+        double prop = 1.0 / (double)res_DivMod.at(i)->frame.getWidth();
         for(int j = 1; j <= Latency; j++){
-            if(j >= res_DivMod.at(i)->timeASAP && j <= res_DivMod.at(i)->timeALAP){
+            if(j >= res_DivMod.at(i)->frame.min && j <= res_DivMod.at(i)->frame.max){
                 sum_DivMod.at(j - 1) += prop;
             }
         }
@@ -798,16 +798,17 @@ void Module::getSelfForces(vector<Operation *> nodes) {
     /* Get the self forces at each time in nodes time frame */
     for(int i = 1; i <= Latency; i++){
         for(int j = 0; j < (unsigned)nodes.size(); j++){
-            double selfForce = 0;
             nodes.at(j)->selfForces.clear();
-            double prop = 1.0 / ((nodes.at(j)->timeALAP - nodes.at(j)->timeASAP) + 1.0);
-            if(i >= nodes.at(j)->timeASAP && i <= nodes.at(j)->timeALAP){
+            //TODO: Cordinate spots in selfForces vector to align with current time frame
+            double selfForce = 0;
+            double prop = 1.0 / (double)nodes.at(i)->frame.getWidth();
+            if(i >= nodes.at(j)->frame.min && i <= nodes.at(j)->frame.max){
                 switch(nodes.at(j)->getOperation()){
                     case ADD:
                     case SUB:
                     case INC:
                     case DEC:
-                        for(int k = nodes.at(j)->timeASAP; k <= nodes.at(j)->timeALAP; k++){
+                        for(int k = nodes.at(j)->frame.min; k <= nodes.at(j)->frame.max; k++){
                             if(i == k){
                                 selfForce += sum_AddSub.at(k - 1) * (1 - prop);
                             }else{
@@ -816,7 +817,7 @@ void Module::getSelfForces(vector<Operation *> nodes) {
                         }
                         break;
                     case MUL:
-                        for(int k = nodes.at(j)->timeASAP; k <= operations.at(j)->timeALAP; k++){
+                        for(int k = nodes.at(j)->frame.min; k <= operations.at(j)->frame.max; k++){
                             if(i == k){
                                 selfForce += sum_Mul.at(k - 1) * (1 - prop);
                             }else{
@@ -826,7 +827,7 @@ void Module::getSelfForces(vector<Operation *> nodes) {
                         break;
                     case DIV:
                     case MOD:
-                        for(int k = nodes.at(j)->timeASAP; k <= nodes.at(j)->timeALAP; k++){
+                        for(int k = nodes.at(j)->frame.min; k <= nodes.at(j)->frame.max; k++){
                             if(i == k){
                                 selfForce += sum_DivMod.at(k - 1) * (1 - prop);
                             }else{
@@ -840,7 +841,7 @@ void Module::getSelfForces(vector<Operation *> nodes) {
                     case MUX2x1:
                     case SHL:
                     case SHR:
-                        for(int k = nodes.at(j)->timeASAP; k <= nodes.at(j)->timeALAP; k++){
+                        for(int k = nodes.at(j)->frame.min; k <= nodes.at(j)->frame.max; k++){
                             if(i == k){
                                 selfForce += sum_Logic.at(k - 1) * (1 - prop);
                             }else{
@@ -874,11 +875,26 @@ void Module::getPredecessorForces() {
  *
  */
 void Module::scheduleNode(vector<Operation *> &nodes){
+    double minForce;
+    if(!nodes.empty()){
+        minForce = nodes.at(0)->totalForce;
+    }
     
+    /* Find node to be scheduled */
+    int index = 0;
+    for(int i = 0; i < (unsigned)nodes.size(); i++){
+        if(minForce > nodes.at(i)->totalForce){
+            minForce = nodes.at(i)->totalForce;
+            index = i;
+        }
+    }
     
     //TODO: Update scheduling position of a node
     //TODO: Update frame of scheduled node
     //TODO: Update all input, output and variable scheduling variables connected to the scheduled node
+    nodes.erase(nodes.begin() + index);
+    
+    
 }
 
 /**

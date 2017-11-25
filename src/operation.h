@@ -38,6 +38,14 @@ enum Operations {
     DEC
 };
 
+typedef struct TimeFrame {
+    int min = 0;
+    int max = 0;
+    int getWidth(){
+        return (max - min) + 1;
+    }
+} TimeFrame;
+
 class Variable;
 class Input;
 class Output;
@@ -64,8 +72,7 @@ public:
     Variable *varNext;
     Variable *inVar[NUM_INPUTS];
     Input *inInput[NUM_INPUTS];
-    int timeASAP = 0;
-    int timeALAP = 0;
+    TimeFrame frame;
     int scheduledTime = 0;
     double totalForce = 0;
     vector<double> selfForces;

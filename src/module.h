@@ -46,7 +46,7 @@ private:
     void resetOutCycles();
     bool getALAPTimes(vector<Operation *> nodes);
     bool getASAPTimes(vector<Operation *> nodes);
-    void getTypePropabilities(vector<Operation *> nodes);
+    void getTypePropabilities();
     void getTotalForces(vector<Operation *> nodes);
     void getSelfForces(vector<Operation *> nodes);
     void getPredecessorForces();
