@@ -67,10 +67,10 @@ public:
     int timeASAP = 0;
     int timeALAP = 0;
     int scheduledTime = 0;
-    vector<double> selfForce;
-    vector<double> predecessorForce;
-    vector<double> sucessorForce;
-    vector<double> totalForce;
+    double totalForce = 0;
+    vector<double> selfForces;
+    vector<double> predecessorForces;
+    vector<double> sucessorForces;
 };
 
 #endif /* operation_h */

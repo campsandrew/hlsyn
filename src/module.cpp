@@ -571,25 +571,24 @@ bool Module::getASAPTimes(vector<Operation *> nodes) {
     vector<Operation *> operationQueue = nodes;
     
     /* Loop until all variables and output delays have been updated */
-    while((signed)operationQueue.size() > 0){
+    while(operationQueue.size() > 0){
         
         /* Iterate through all operations to update delays */
         bool opRemoved = false;
-        for (int i = 0; i < (signed)operations.size(); i++) {
+        for (int i = 0; i < (signed)nodes.size(); i++) {
             bool inCyclesCalculated = true;
             double tempCycle = 0;
             double maxInCycle = 0;
             
             /* Get the current maximum delay from operation inputs */
             for(int j = 0; j < NUM_INPUTS; j++){
-                if(operations.at(i)->inVar[j] != NULL){
-                    if(operations.at(i)->inVar[j]->outCycle == -1){
+                if(nodes.at(i)->inVar[j] != NULL){
+                    if(nodes.at(i)->inVar[j]->outCycle == -1){
                         inCyclesCalculated = false;
                         break;
                     }else{
-                        if(maxInCycle < operations.at(i)->inVar[j]->outCycle){
-                            maxInCycle = operations.at(i)->inVar[j]->outCycle;
-                            
+                        if(maxInCycle < nodes.at(i)->inVar[j]->outCycle){
+                            maxInCycle = nodes.at(i)->inVar[j]->outCycle;
                         }
                     }
                 }else{
@@ -601,24 +600,25 @@ bool Module::getASAPTimes(vector<Operation *> nodes) {
             if(inCyclesCalculated){
                 
                 /* Pass delay of operation output */
-                operations.at(i)->timeASAP = maxInCycle + 1;
-                tempCycle = maxInCycle + operations.at(i)->getCycleDelay();
-                if(operations.at(i)->varNext != NULL){
-                    operations.at(i)->varNext->outCycle = tempCycle;
+                nodes.at(i)->timeASAP = maxInCycle + 1;
+                tempCycle = maxInCycle + nodes.at(i)->getCycleDelay();
+                if(nodes.at(i)->varNext != NULL){
+                    nodes.at(i)->varNext->outCycle = tempCycle;
                 }else{
-                    operations.at(i)->outNext->outCycle = tempCycle;
+                    nodes.at(i)->outNext->outCycle = tempCycle;
                 }
                 
                 /* Remove currently calculated operation from the operation queue */
                 for(int j = 0; j < (signed)operationQueue.size(); j++){
-                    if(operations.at(i)->getOperation() == operationQueue.at(j)->getOperation()
-                       && operations.at(i)->getOpID() == operationQueue.at(j)->getOpID()){
+                    if(nodes.at(i)->getOperation() == operationQueue.at(j)->getOperation()
+                       && nodes.at(i)->getOpID() == operationQueue.at(j)->getOpID()){
                         operationQueue.erase(operationQueue.begin() + j);
                         opRemoved = true;
                         break;
                     }
                 }
             }
+            
         }
         
         if(!opRemoved){
@@ -637,21 +637,21 @@ bool Module::getALAPTimes(vector<Operation *> nodes) {
     vector<Operation *> operationQueue = nodes;
     
     /* Loop until all variables and output delays have been updated */
-    while((signed)operationQueue.size() > 0){
+    while(operationQueue.size() > 0){
         
         /* Iterate through all operations to update delays */
         bool opRemoved = false;
-        for (int i = 0; i < (signed)operations.size(); i++) {
+        for (int i = 0; i < (signed)nodes.size(); i++) {
             bool inCyclesCalculated = true;
             double tempCycle = 0;
             double maxInCycle = Latency + 1;
             
-            if(operations.at(i)->varNext != NULL){
-                if(operations.at(i)->varNext->outCycle == -1){
+            if(nodes.at(i)->varNext != NULL){
+                if(nodes.at(i)->varNext->outCycle == -1){
                     inCyclesCalculated = false;
                     continue;
                 }else{
-                    maxInCycle = operations.at(i)->varNext->outCycle;
+                    maxInCycle = nodes.at(i)->varNext->outCycle;
                 }
             }
             
@@ -659,26 +659,26 @@ bool Module::getALAPTimes(vector<Operation *> nodes) {
             if(inCyclesCalculated){
                 
                 /* Pass delay of operation output */
-                tempCycle = maxInCycle - operations.at(i)->getCycleDelay();
+                tempCycle = maxInCycle - nodes.at(i)->getCycleDelay();
                 if(tempCycle < 1){
                     cout << "ERROR: Not enough cycles to schedule graph" << endl;
                     return false;
                 }
-                operations.at(i)->timeALAP = tempCycle;
+                nodes.at(i)->timeALAP = tempCycle;
                 for(int j = 0; j < NUM_INPUTS; j++){
-                    if(operations.at(i)->inVar[j] != NULL){
-                        operations.at(i)->inVar[j]->outCycle = tempCycle;
+                    if(nodes.at(i)->inVar[j] != NULL){
+                        nodes.at(i)->inVar[j]->outCycle = tempCycle;
                     }else{
-                        if(operations.at(i)->inInput[j] != NULL){
-                            operations.at(i)->inInput[j]->outCycle = tempCycle;
+                        if(nodes.at(i)->inInput[j] != NULL){
+                            nodes.at(i)->inInput[j]->outCycle = tempCycle;
                         }
                     }
                 }
                 
                 /* Remove currently calculated operation from the operation queue */
                 for(int j = 0; j < (signed)operationQueue.size(); j++){
-                    if(operations.at(i)->getOperation() == operationQueue.at(j)->getOperation()
-                       && operations.at(i)->getOpID() == operationQueue.at(j)->getOpID()){
+                    if(nodes.at(i)->getOperation() == operationQueue.at(j)->getOperation()
+                       && nodes.at(i)->getOpID() == operationQueue.at(j)->getOpID()){
                         operationQueue.erase(operationQueue.begin() + j);
                         opRemoved = true;
                         break;
@@ -732,6 +732,10 @@ void Module::getTypePropabilities(vector<Operation *> nodes){
     }
     
     /* Adds the propabilities to sum matrix */
+    sum_AddSub.clear();
+    sum_Mul.clear();
+    sum_Logic.clear();
+    sum_DivMod.clear();
     for(int i = 0; i < Latency; i++){
         sum_AddSub.push_back(0);
         sum_Mul.push_back(0);
@@ -779,8 +783,11 @@ void Module::getTypePropabilities(vector<Operation *> nodes){
  */
 void Module::getTotalForces(vector<Operation *> nodes){
     
+    getSelfForces(nodes);
+    getSuccessorForces();
+    getPredecessorForces();
     
-    
+    //TODO: Get smallest total force for each node
 }
 
 /**
@@ -790,16 +797,17 @@ void Module::getSelfForces(vector<Operation *> nodes) {
     
     /* Get the self forces at each time in nodes time frame */
     for(int i = 1; i <= Latency; i++){
-        for(int j = 0; j < operations.size(); j++){
+        for(int j = 0; j < (unsigned)nodes.size(); j++){
             double selfForce = 0;
-            double prop = 1.0 / ((operations.at(j)->timeALAP - operations.at(j)->timeASAP) + 1.0);
-            if(i >= operations.at(j)->timeASAP && i <= operations.at(j)->timeALAP){
-                switch(operations.at(j)->getOperation()){
+            nodes.at(j)->selfForces.clear();
+            double prop = 1.0 / ((nodes.at(j)->timeALAP - nodes.at(j)->timeASAP) + 1.0);
+            if(i >= nodes.at(j)->timeASAP && i <= nodes.at(j)->timeALAP){
+                switch(nodes.at(j)->getOperation()){
                     case ADD:
                     case SUB:
                     case INC:
                     case DEC:
-                        for(int k = operations.at(j)->timeASAP; k <= operations.at(j)->timeALAP; k++){
+                        for(int k = nodes.at(j)->timeASAP; k <= nodes.at(j)->timeALAP; k++){
                             if(i == k){
                                 selfForce += sum_AddSub.at(k - 1) * (1 - prop);
                             }else{
@@ -808,7 +816,7 @@ void Module::getSelfForces(vector<Operation *> nodes) {
                         }
                         break;
                     case MUL:
-                        for(int k = operations.at(j)->timeASAP; k <= operations.at(j)->timeALAP; k++){
+                        for(int k = nodes.at(j)->timeASAP; k <= operations.at(j)->timeALAP; k++){
                             if(i == k){
                                 selfForce += sum_Mul.at(k - 1) * (1 - prop);
                             }else{
@@ -818,7 +826,7 @@ void Module::getSelfForces(vector<Operation *> nodes) {
                         break;
                     case DIV:
                     case MOD:
-                        for(int k = operations.at(j)->timeASAP; k <= operations.at(j)->timeALAP; k++){
+                        for(int k = nodes.at(j)->timeASAP; k <= nodes.at(j)->timeALAP; k++){
                             if(i == k){
                                 selfForce += sum_DivMod.at(k - 1) * (1 - prop);
                             }else{
@@ -832,7 +840,7 @@ void Module::getSelfForces(vector<Operation *> nodes) {
                     case MUX2x1:
                     case SHL:
                     case SHR:
-                        for(int k = operations.at(j)->timeASAP; k <= operations.at(j)->timeALAP; k++){
+                        for(int k = nodes.at(j)->timeASAP; k <= nodes.at(j)->timeALAP; k++){
                             if(i == k){
                                 selfForce += sum_Logic.at(k - 1) * (1 - prop);
                             }else{
@@ -842,7 +850,7 @@ void Module::getSelfForces(vector<Operation *> nodes) {
                         break;
                 }
                 
-                operations.at(j)->selfForce.push_back(selfForce);
+                nodes.at(j)->selfForces.push_back(selfForce);
             }
         }
     }
@@ -866,6 +874,8 @@ void Module::getPredecessorForces() {
  *
  */
 void Module::scheduleNode(vector<Operation *> &nodes){
+    
+    
     //TODO: Update scheduling position of a node
     //TODO: Update frame of scheduled node
     //TODO: Update all input, output and variable scheduling variables connected to the scheduled node
