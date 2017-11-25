@@ -20,6 +20,8 @@
 #include "input.h"
 #include "output.h"
 #include "variable.h"
+#include "node.h"
+#include "type.h"
 
 using namespace std;
 
@@ -66,6 +68,12 @@ public:
     vector<double> sum_Mul;
     vector<double> sum_Logic;
     vector<double> sum_DivMod;
+    
+    vector<Input *> _inputs;
+    vector<Output *> _outputs;
+    vector<Variable *> _variables;
+    vector<node *> _nodes;
+    
 };
 
 #endif /* module_h */

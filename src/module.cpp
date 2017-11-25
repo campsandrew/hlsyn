@@ -142,12 +142,15 @@ bool Module::parseLine(vector<string> line) {
             switch(lineType){
                 case INPUT_TYPE:
                     this->inputs.push_back(new Input(name, size, usigned));
+                    this->_inputs.push_back(new Input(name, size, usigned));
                     break;
                 case OUTPUT_TYPE:
                     this->outputs.push_back(new Output(name, size, usigned));
+                    this->_outputs.push_back(new Output(name, size, usigned));
                     break;
                 case VARIABLE_TYPE:
                     this->variables.push_back(new Variable(name, size, usigned));
+                    this->_variables.push_back(new Variable(name, size, usigned));
                     break;
                 default:
                     /* do nothing */
@@ -157,7 +160,22 @@ bool Module::parseLine(vector<string> line) {
             line.erase(line.begin());
         }
     } else if(lineType == IFELSE_TYPE || lineType == FORLOOP_TYPE) {
-        
+        switch(lineType){
+            case IFELSE_TYPE: {
+                node* curr = NULL;
+                int nextIndex = -1, currIndex = -1, inIndex = -1, outIndex = -1, regIndex = -1;
+                
+                
+                break;
+            }
+            case FORLOOP_TYPE: {
+                
+                
+                break;
+            }
+            default:
+                break;
+        }
     } else {
         
         /* Checks to see if the first variable is an output type */

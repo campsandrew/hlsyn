@@ -15,12 +15,13 @@
 #include <vector>
 
 #include "operation.h"
+#include "type.h"
 
 using namespace std;
 
 class Operation;
 
-class Input {
+class Input: public type {
 private:
     bool usigned;
     int dataWidth;
