@@ -93,7 +93,7 @@ public:
     void appendSucceedingIf(node* succeedingIf);
     void appendSucceedingElse(node* succeedingElse);
     void OperationProbabililty(int latency);
-    void SelfForce(std::vector<double> typeDistribution);
+    void SelfForce(std::vector<double> dist_type);
     void PredecessorForce(vector<double> dist_mul, vector<double> dist_addSub, vector<double> dist_modDiv, vector<double> dist_logic);
     void SuccessorForce(vector<double> dist_mul, vector<double> dist_addSub, vector<double> dist_modDiv, vector<double> dist_logic);
     void TotalForce();

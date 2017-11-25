@@ -72,7 +72,7 @@ public:
     vector<Input *> _inputs;
     vector<Output *> _outputs;
     vector<Variable *> _variables;
-    vector<node *> _nodes;
+    vector<node *> nodes;
     
 };
 

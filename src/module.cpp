@@ -76,24 +76,24 @@ bool Module::parseLine(vector<string> line) {
     if(!line.size()) return true;
     
     /* Parse first word of each line */
-    string type = line.front();
-    if(type.compare("input") == 0){
+    string typeLine = line.front();
+    if(typeLine.compare("input") == 0){
         line.erase(line.begin());
         lineType = INPUT_TYPE;
     } /* Output */
-    else if(type.compare("output") == 0){
+    else if(typeLine.compare("output") == 0){
         line.erase(line.begin());
         lineType = OUTPUT_TYPE;
     } /* Variable */
-    else if(type.compare("variable") == 0){
+    else if(typeLine.compare("variable") == 0){
         line.erase(line.begin());
         lineType = VARIABLE_TYPE;
     } /* If else */
-    else if(type.compare("if") == 0){
+    else if(typeLine.compare("if") == 0){
         line.erase(line.begin());
         lineType = IFELSE_TYPE;
     } /* For loop */
-    else if(type.compare("for") == 0){
+    else if(typeLine.compare("for") == 0){
         line.erase(line.begin());
         lineType = FORLOOP_TYPE;
     } /* Operation or invalid line  */
@@ -163,7 +163,16 @@ bool Module::parseLine(vector<string> line) {
         switch(lineType){
             case IFELSE_TYPE: {
                 node* curr = NULL;
+                string condition;
                 int nextIndex = -1, currIndex = -1, inIndex = -1, outIndex = -1, regIndex = -1;
+                
+                node* newNode = new node("if", nodes.size() + 1, vector<type *>(), vector<type *>());
+                nodes.push_back(newNode);
+                
+                currIndex = nodes.size() + 1;
+                curr = nodes.at(currIndex);
+                curr->setConditional(true);
+                
                 
                 
                 break;
