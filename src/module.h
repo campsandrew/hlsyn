@@ -68,7 +68,8 @@ public:
     vector<double> sum_Mul;
     vector<double> sum_Logic;
     vector<double> sum_DivMod;
-    
+    bool prevIf;
+    int ifIndex;
     vector<Input *> _inputs;
     vector<Output *> _outputs;
     vector<Variable *> _variables;

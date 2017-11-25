@@ -164,16 +164,56 @@ bool Module::parseLine(vector<string> line) {
             case IFELSE_TYPE: {
                 node* curr = NULL;
                 string condition;
-                int nextIndex = -1, currIndex = -1, inIndex = -1, outIndex = -1, regIndex = -1;
+                int nextIndex = -1, currIndex = -1, inIndex = -1, outIndex = -1, varIndex = -1;
+                bool varCheck = false;
                 
+                /* Generating new node for the if statement */
                 node* newNode = new node("if", nodes.size() + 1, vector<type *>(), vector<type *>());
                 nodes.push_back(newNode);
                 
-                currIndex = nodes.size() + 1;
+                currIndex = nodes.size() - 1;
                 curr = nodes.at(currIndex);
                 curr->setConditional(true);
+                condition = line.at(1);
+                line.erase(line.begin());
+                /* Check if variable in condition exists */
+                for (int i = 0; i < _inputs.size(); i++) {
+                    if (!(_inputs.at(i)->getName().compare(condition))) {
+                        varCheck = true;
+                        inIndex = i;
+                        break;
+                    }
+                }
+                for (int i = 0; i < _outputs.size(); i++) {
+                    if (!(_outputs.at(i)->getName().compare(condition))) {
+                        varCheck = true;
+                        outIndex = i;
+                        break;
+                    }
+                }
+                for (int i = 0; i < _variables.size(); i++) {
+                    if (!(_variables.at(i)->getName().compare(condition))) {
+                        varCheck = true;
+                        varIndex = i;
+                        break;
+                    }
+                }
+                line.erase(line.begin());
+                /* If condition was found, add variable to node based off its type */
+                if (varCheck) {
+                    if (varIndex != -1) {
+                        curr->appendIn(_variables.at(varIndex));
+                    }
+                    else if (inIndex != -1) {
+                        curr->appendIn(_inputs.at(inIndex));
+                    }
+                }
+                else {
+                    cout << "If condition variable does not exist (or something went wrong there). Debug this." << endl;
+                    return -1;
+                }
                 
-                
+                prevIf = true;
                 
                 break;
             }
