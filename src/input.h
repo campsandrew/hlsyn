@@ -32,7 +32,8 @@ public:
     bool isUnsigned() { return usigned; }
     string toString();
     vector<Operation *> toOperations;
-    int outCycle = -1;
+    int outCycle = 0;
+    bool isScheduled = false;
 };
 
 #endif /* input_h */

@@ -33,7 +33,8 @@ public:
     string toString();
     Operation *fromOperation;
     vector<Operation *> toOperations;
-    int outCycle = -1;
+    int outCycle = 0;
+    bool isScheduled = false;
 };
 
 #endif /* variable_h */

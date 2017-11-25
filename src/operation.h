@@ -64,8 +64,9 @@ public:
     Variable *varNext;
     Variable *inVar[NUM_INPUTS];
     Input *inInput[NUM_INPUTS];
-    int timeASAP = -1;
-    int timeALAP = -1;
+    int timeASAP = 0;
+    int timeALAP = 0;
+    int scheduledTime = 0;
     vector<double> selfForce;
     vector<double> predecessorForce;
     vector<double> sucessorForce;

@@ -525,20 +525,15 @@ bool Module::scheduleOperations() {
  *
  */
 bool Module::getTimeFrames(vector<Operation *> nodes){
+    
     /* Calculate ASAP */
+    resetOutCycles();
     if(!getASAPTimes(nodes)){
         return false;
     }
-
-    /* Resets variables for calculating frames */
-    for(auto &i : inputs){
-        i->outCycle = -1;
-    }
-    for(auto &i : variables){
-        i->outCycle = -1;
-    }
-
+    
     /* Calculate ALAP */
+    resetOutCycles();
     if(!getALAPTimes(nodes)){
         return false;
     }
@@ -549,13 +544,31 @@ bool Module::getTimeFrames(vector<Operation *> nodes){
 /**
  *
  */
-bool Module::getASAPTimes(vector<Operation *> nodes) {
-    vector<Operation *> operationQueue;
+void Module::resetOutCycles(){
     
-    /* Put all operations on queue */
-    for (int i = 0; i < (signed)operations.size(); i++) {
-        operationQueue.push_back(operations.at(i));
+    /* Resets variables for calculating frames */
+    for(auto &i : inputs){
+        if(!i->isScheduled){
+            i->outCycle = -1;
+        }
     }
+    for(auto &i : outputs){
+        if(!i->isScheduled){
+            i->outCycle = -1;
+        }
+    }
+    for(auto &i : variables){
+        if(!i->isScheduled){
+            i->outCycle = -1;
+        }
+    }
+}
+
+/**
+ *
+ */
+bool Module::getASAPTimes(vector<Operation *> nodes) {
+    vector<Operation *> operationQueue = nodes;
     
     /* Loop until all variables and output delays have been updated */
     while((signed)operationQueue.size() > 0){
@@ -621,12 +634,7 @@ bool Module::getASAPTimes(vector<Operation *> nodes) {
  *
  */
 bool Module::getALAPTimes(vector<Operation *> nodes) {
-    vector<Operation *> operationQueue;
-    
-    /* Put all operations on queue */
-    for (int i = 0; i < (signed)operations.size(); i++) {
-        operationQueue.push_back(operations.at(i));
-    }
+    vector<Operation *> operationQueue = nodes;
     
     /* Loop until all variables and output delays have been updated */
     while((signed)operationQueue.size() > 0){
@@ -766,6 +774,9 @@ void Module::getTypePropabilities(vector<Operation *> nodes){
     }
 }
 
+/**
+ *
+ */
 void Module::getTotalForces(vector<Operation *> nodes){
     
     
@@ -855,10 +866,9 @@ void Module::getPredecessorForces() {
  *
  */
 void Module::scheduleNode(vector<Operation *> &nodes){
-    
-    
-    
-    
+    //TODO: Update scheduling position of a node
+    //TODO: Update frame of scheduled node
+    //TODO: Update all input, output and variable scheduling variables connected to the scheduled node
 }
 
 /**

@@ -31,7 +31,8 @@ public:
     bool isUnsigned() { return usigned; }
     string toString();
     Operation *fromOperation;
-    int outCycle = -1;
+    int outCycle = 0;
+    bool isScheduled = false;
 };
 
 #endif /* output_h */

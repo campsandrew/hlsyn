@@ -43,6 +43,7 @@ private:
     vector<string> split(string const &input);
     bool scheduleOperations();
     bool getTimeFrames(vector<Operation *> nodes);
+    void resetOutCycles();
     bool getALAPTimes(vector<Operation *> nodes);
     bool getASAPTimes(vector<Operation *> nodes);
     void getTypePropabilities(vector<Operation *> nodes);
