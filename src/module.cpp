@@ -506,36 +506,17 @@ bool Module::getDataType(string type, int *size){
  *
  */
 bool Module::scheduleOperations() {
+    vector<Operation *> unscheduled = operations;
     
-    /* Calculate ASAP */
-    int handle = getASAPTimes();
-    if(!handle){
-        return false;
+    /* Perform force directed scheduling */
+    while(unscheduled.size() != 0){
+        if(!getTimeFrames(unscheduled)){
+            return false;
+        }
+        getTypePropabilities(unscheduled);
+        getTotalForces(unscheduled);
+        scheduleNode(unscheduled); // Removes scheduled node
     }
-    
-    /* Resets variables for calculating frames */
-    for(auto &i : inputs){
-        i->outCycle = -1;
-    }
-    for(auto &i : variables){
-        i->outCycle = -1;
-    }
-    
-    /* Calculate ALAP */
-    handle = getALAPTimes();
-    if(!handle){
-        return false;
-    }
-    
-    /* Calculate type propabilities */
-    getTypePropabilities();
-    
-    /* Calculate self force */
-    getSelfForce();
-    
-    /* Calculate predecessor and successor forces */
-    //getSuccessorForces();
-    //getPredecessorForces();
     
     return true;
 }
@@ -543,7 +524,32 @@ bool Module::scheduleOperations() {
 /**
  *
  */
-bool Module::getASAPTimes() {
+bool Module::getTimeFrames(vector<Operation *> nodes){
+    /* Calculate ASAP */
+    if(!getASAPTimes(nodes)){
+        return false;
+    }
+
+    /* Resets variables for calculating frames */
+    for(auto &i : inputs){
+        i->outCycle = -1;
+    }
+    for(auto &i : variables){
+        i->outCycle = -1;
+    }
+
+    /* Calculate ALAP */
+    if(!getALAPTimes(nodes)){
+        return false;
+    }
+    
+    return true;
+}
+
+/**
+ *
+ */
+bool Module::getASAPTimes(vector<Operation *> nodes) {
     vector<Operation *> operationQueue;
     
     /* Put all operations on queue */
@@ -614,7 +620,7 @@ bool Module::getASAPTimes() {
 /**
  *
  */
-bool Module::getALAPTimes() {
+bool Module::getALAPTimes(vector<Operation *> nodes) {
     vector<Operation *> operationQueue;
     
     /* Put all operations on queue */
@@ -685,7 +691,7 @@ bool Module::getALAPTimes() {
 /**
  *
  */
-void Module::getTypePropabilities(){
+void Module::getTypePropabilities(vector<Operation *> nodes){
     vector<Operation *> res_AddSub;
     vector<Operation *> res_Mul;
     vector<Operation *> res_Logic;
@@ -760,10 +766,16 @@ void Module::getTypePropabilities(){
     }
 }
 
+void Module::getTotalForces(vector<Operation *> nodes){
+    
+    
+    
+}
+
 /**
  *
  */
-void Module::getSelfForce() {
+void Module::getSelfForces(vector<Operation *> nodes) {
     
     /* Get the self forces at each time in nodes time frame */
     for(int i = 1; i <= Latency; i++){
@@ -823,75 +835,29 @@ void Module::getSelfForce() {
             }
         }
     }
-    
-    //cout << "here" << endl;
 }
 
+/**
+ *
+ */
 void Module::getSuccessorForces() {
-    vector<Operation *> res_AddSub;
-    vector<Operation *> res_Mul;
-    vector<Operation *> res_Logic;
-    vector<Operation *> res_DivMod;
-    
-    /* Generating individual operation vectors and intializing successor forc*/
-    for(auto &i : operations){
-        switch(i->getOperation()){
-            case ADD:
-            case SUB:
-            case INC:
-            case DEC:
-                res_AddSub.push_back(i);
-                //for (int j = 0; j < i->operationProbability.size(); j++) {
-                    //i->successorForce.push_back(0);
-                //}
-                break;
-            case MUL:
-                res_Mul.push_back(i);
-                //for (int j = 0; j < i->operationProbability.size(); j++) {
-                    //i->successorForce.push_back(0);
-                //}
-                break;
-            case DIV:
-            case MOD:
-                res_DivMod.push_back(i);
-                //for (int j = 0; j < i->operationProbability.size(); j++) {
-                    //i->successorForce.push_back(0);
-                //}
-                break;
-            case COMP_EQ:
-            case COMP_GT:
-            case COMP_LT:
-            case MUX2x1:
-            case SHL:
-            case SHR:
-                //res_Logic.push_back(i);
-                //for (int j = 0; j < i->operationProbability.size(); j++) {
-                    //i->successorForce.push_back(0);
-                //}
-                break;
-        }
-    }
-    
-    /* Successor force generation for ADD and SUB operations */
-    for (int i = 0; i < res_AddSub.size(); i++) {
-        /* If successor node exists, proceed with generation, otherwise no force is generated */
-        if (res_AddSub.at(i)->outNext != NULL) {
-            for (int j = res_AddSub.at(i)->timeASAP; j <= res_AddSub.at(i)->timeALAP; j++) {
-                
-            }
-        }
-        Variable *varTemp = res_AddSub.at(i)->varNext;
-        if (varTemp != NULL) {
-            exploreVar(res_AddSub, i);
-        }
-    }
-}
-
-void Module::exploreVar(vector<Operation *> operationVector, int count) {
     
 }
 
+/**
+ *
+ */
 void Module::getPredecessorForces() {
+    
+}
+
+/**
+ *
+ */
+void Module::scheduleNode(vector<Operation *> &nodes){
+    
+    
+    
     
 }
 

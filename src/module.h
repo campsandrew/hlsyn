@@ -42,13 +42,15 @@ private:
     int getID(Operations operation);
     vector<string> split(string const &input);
     bool scheduleOperations();
-    bool getALAPTimes();
-    bool getASAPTimes();
-    void getTypePropabilities();
-    void getSelfForce();
+    bool getTimeFrames(vector<Operation *> nodes);
+    bool getALAPTimes(vector<Operation *> nodes);
+    bool getASAPTimes(vector<Operation *> nodes);
+    void getTypePropabilities(vector<Operation *> nodes);
+    void getTotalForces(vector<Operation *> nodes);
+    void getSelfForces(vector<Operation *> nodes);
     void getPredecessorForces();
     void getSuccessorForces();
-    void exploreVar(vector<Operation *> operationVector, int count);
+    void scheduleNode(vector<Operation *> &nodes);
 public:
     Module(string name, int latency);
     string getName() { return name; }
