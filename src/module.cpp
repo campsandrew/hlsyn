@@ -824,7 +824,75 @@ void Module::getSelfForce() {
         }
     }
     
-    cout << "here" << endl;
+    //cout << "here" << endl;
+}
+
+void Module::getSuccessorForces() {
+    vector<Operation *> res_AddSub;
+    vector<Operation *> res_Mul;
+    vector<Operation *> res_Logic;
+    vector<Operation *> res_DivMod;
+    
+    /* Generating individual operation vectors and intializing successor forc*/
+    for(auto &i : operations){
+        switch(i->getOperation()){
+            case ADD:
+            case SUB:
+            case INC:
+            case DEC:
+                res_AddSub.push_back(i);
+                //for (int j = 0; j < i->operationProbability.size(); j++) {
+                    //i->successorForce.push_back(0);
+                //}
+                break;
+            case MUL:
+                res_Mul.push_back(i);
+                //for (int j = 0; j < i->operationProbability.size(); j++) {
+                    //i->successorForce.push_back(0);
+                //}
+                break;
+            case DIV:
+            case MOD:
+                res_DivMod.push_back(i);
+                //for (int j = 0; j < i->operationProbability.size(); j++) {
+                    //i->successorForce.push_back(0);
+                //}
+                break;
+            case COMP_EQ:
+            case COMP_GT:
+            case COMP_LT:
+            case MUX2x1:
+            case SHL:
+            case SHR:
+                //res_Logic.push_back(i);
+                //for (int j = 0; j < i->operationProbability.size(); j++) {
+                    //i->successorForce.push_back(0);
+                //}
+                break;
+        }
+    }
+    
+    /* Successor force generation for ADD and SUB operations */
+    for (int i = 0; i < res_AddSub.size(); i++) {
+        /* If successor node exists, proceed with generation, otherwise no force is generated */
+        if (res_AddSub.at(i)->outNext != NULL) {
+            for (int j = res_AddSub.at(i)->timeASAP; j <= res_AddSub.at(i)->timeALAP; j++) {
+                
+            }
+        }
+        Variable *varTemp = res_AddSub.at(i)->varNext;
+        if (varTemp != NULL) {
+            exploreVar(res_AddSub, i);
+        }
+    }
+}
+
+void Module::exploreVar(vector<Operation *> operationVector, int count) {
+    
+}
+
+void Module::getPredecessorForces() {
+    
 }
 
 /**
