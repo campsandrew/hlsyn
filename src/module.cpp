@@ -641,17 +641,17 @@ bool Module::getALAPTimes(vector<Operation *> nodes) {
         
         /* Iterate through all operations to update delays */
         bool opRemoved = false;
-        for (int i = 0; i < (signed)nodes.size(); i++) {
+        for (int i = 0; i < (unsigned)operationQueue.size(); i++) {
             bool inCyclesCalculated = true;
             double tempCycle = 0;
             double maxInCycle = Latency + 1;
             
-            if(nodes.at(i)->varNext != NULL){
-                if(nodes.at(i)->varNext->outCycle == -1){
+            if(operationQueue.at(i)->varNext != NULL){
+                if(operationQueue.at(i)->varNext->outCycle == -1){
                     inCyclesCalculated = false;
-                    continue;
+                    break;
                 }else{
-                    maxInCycle = nodes.at(i)->varNext->outCycle;
+                    maxInCycle = operationQueue.at(i)->varNext->outCycle;
                 }
             }
             
@@ -659,21 +659,23 @@ bool Module::getALAPTimes(vector<Operation *> nodes) {
             if(inCyclesCalculated){
                 
                 /* Pass delay of operation output */
-                tempCycle = maxInCycle - nodes.at(i)->getCycleDelay();
+                tempCycle = maxInCycle - operationQueue.at(i)->getCycleDelay();
                 if(tempCycle < 1){
                     cout << "ERROR: Not enough cycles to schedule graph" << endl;
                     return false;
                 }
-                nodes.at(i)->frame.max = tempCycle;
+                operationQueue.at(i)->frame.max = tempCycle;
                 for(int j = 0; j < NUM_INPUTS; j++){
-                    if(nodes.at(i)->inVar[j] != NULL){
-                        nodes.at(i)->inVar[j]->outCycle = tempCycle;
+                    if(operationQueue.at(i)->inVar[j] != NULL){
+                        operationQueue.at(i)->inVar[j]->outCycle = tempCycle;
                     }else{
-                        if(nodes.at(i)->inInput[j] != NULL){
-                            nodes.at(i)->inInput[j]->outCycle = tempCycle;
+                        if(operationQueue.at(i)->inInput[j] != NULL){
+                            operationQueue.at(i)->inInput[j]->outCycle = tempCycle;
                         }
                     }
                 }
+                
+                
                 
                 /* Remove currently calculated operation from the operation queue */
                 for(int j = 0; j < (signed)operationQueue.size(); j++){
@@ -787,7 +789,22 @@ void Module::getTotalForces(vector<Operation *> nodes){
     getSuccessorForces();
     getPredecessorForces();
     
-    //TODO: Get smallest total force for each node
+    for(int i = 0; i < (unsigned)nodes.size(); i++){
+        int j = nodes.at(i)->frame.min;
+        int tempTime = j;
+        double minForce = nodes.at(i)->selfForces.at(j - 1);
+        while(j <= nodes.at(i)->frame.max){
+            if(minForce > nodes.at(i)->selfForces.at(j - 1)){
+                minForce = nodes.at(i)->selfForces.at(j - 1);
+                tempTime = j;
+            }
+            j++;
+        }
+        
+        nodes.at(i)->totalForce = minForce;
+        nodes.at(i)->tempTime = tempTime;
+    }
+    
 }
 
 /**
@@ -795,13 +812,16 @@ void Module::getTotalForces(vector<Operation *> nodes){
  */
 void Module::getSelfForces(vector<Operation *> nodes) {
     
+    /* Clear selfForce variables */
+    for(int i = 0; i < (unsigned)nodes.size(); i++){
+        nodes.at(i)->selfForces.clear();
+    }
+    
     /* Get the self forces at each time in nodes time frame */
     for(int i = 1; i <= Latency; i++){
         for(int j = 0; j < (unsigned)nodes.size(); j++){
-            nodes.at(j)->selfForces.clear();
-            //TODO: Cordinate spots in selfForces vector to align with current time frame
             double selfForce = 0;
-            double prop = 1.0 / (double)nodes.at(i)->frame.getWidth();
+            double prop = 1.0 / (double)nodes.at(j)->frame.getWidth();
             if(i >= nodes.at(j)->frame.min && i <= nodes.at(j)->frame.max){
                 switch(nodes.at(j)->getOperation()){
                     case ADD:
@@ -851,6 +871,11 @@ void Module::getSelfForces(vector<Operation *> nodes) {
                         break;
                 }
                 
+                /* Align index with time */
+                while(nodes.at(j)->selfForces.size() < i - 1){
+                    nodes.at(j)->selfForces.push_back(NO_FORCE);
+                }
+                
                 nodes.at(j)->selfForces.push_back(selfForce);
             }
         }
@@ -889,12 +914,29 @@ void Module::scheduleNode(vector<Operation *> &nodes){
         }
     }
     
-    //TODO: Update scheduling position of a node
-    //TODO: Update frame of scheduled node
-    //TODO: Update all input, output and variable scheduling variables connected to the scheduled node
+    /* Update scheduled node and remove from unscheduled vector */
+    nodes.at(index)->scheduledTime = nodes.at(index)->tempTime;
+    nodes.at(index)->frame.min = nodes.at(index)->scheduledTime;
+    nodes.at(index)->frame.max = nodes.at(index)->scheduledTime;
+    if(nodes.at(index)->varNext != NULL){
+        nodes.at(index)->varNext->outCycle = nodes.at(index)->scheduledTime + nodes.at(index)->getCycleDelay();
+        nodes.at(index)->varNext->isScheduled = true;
+    }else{
+        nodes.at(index)->outNext->outCycle = nodes.at(index)->scheduledTime + nodes.at(index)->getCycleDelay();
+        nodes.at(index)->outNext->isScheduled = true;
+    }
+    for(int i = 0; i < NUM_INPUTS; i++){
+        if(nodes.at(index)->inVar[i] != NULL){
+            nodes.at(index)->inVar[i]->outCycle = nodes.at(index)->scheduledTime + nodes.at(index)->getCycleDelay();
+            nodes.at(index)->inVar[i]->isScheduled = true;
+        }else{
+            if(nodes.at(index)->inInput[i] != NULL){
+                nodes.at(index)->inInput[i]->outCycle = nodes.at(index)->scheduledTime + nodes.at(index)->getCycleDelay();
+                nodes.at(index)->inInput[i]->isScheduled = true;
+            }
+        }
+    }
     nodes.erase(nodes.begin() + index);
-    
-    
 }
 
 /**

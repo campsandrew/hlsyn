@@ -73,6 +73,7 @@ public:
     Variable *inVar[NUM_INPUTS];
     Input *inInput[NUM_INPUTS];
     TimeFrame frame;
+    int tempTime = 0;
     int scheduledTime = 0;
     double totalForce = 0;
     vector<double> selfForces;
