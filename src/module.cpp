@@ -641,17 +641,17 @@ bool Module::getALAPTimes(vector<Operation *> nodes) {
         
         /* Iterate through all operations to update delays */
         bool opRemoved = false;
-        for (int i = 0; i < (unsigned)operationQueue.size(); i++) {
+        for (int i = 0; i < (unsigned)nodes.size(); i++) {
             bool inCyclesCalculated = true;
             double tempCycle = 0;
             double maxInCycle = Latency + 1;
             
-            if(operationQueue.at(i)->varNext != NULL){
-                if(operationQueue.at(i)->varNext->outCycle == -1){
+            if(nodes.at(i)->varNext != NULL){
+                if(nodes.at(i)->varNext->outCycle == -1){
                     inCyclesCalculated = false;
-                    break;
+                    continue;
                 }else{
-                    maxInCycle = operationQueue.at(i)->varNext->outCycle;
+                    maxInCycle = nodes.at(i)->varNext->outCycle;
                 }
             }
             
@@ -659,23 +659,21 @@ bool Module::getALAPTimes(vector<Operation *> nodes) {
             if(inCyclesCalculated){
                 
                 /* Pass delay of operation output */
-                tempCycle = maxInCycle - operationQueue.at(i)->getCycleDelay();
+                tempCycle = maxInCycle - nodes.at(i)->getCycleDelay();
                 if(tempCycle < 1){
                     cout << "ERROR: Not enough cycles to schedule graph" << endl;
                     return false;
                 }
-                operationQueue.at(i)->frame.max = tempCycle;
+                nodes.at(i)->frame.max = tempCycle;
                 for(int j = 0; j < NUM_INPUTS; j++){
-                    if(operationQueue.at(i)->inVar[j] != NULL){
-                        operationQueue.at(i)->inVar[j]->outCycle = tempCycle;
+                    if(nodes.at(i)->inVar[j] != NULL){
+                        nodes.at(i)->inVar[j]->outCycle = tempCycle;
                     }else{
-                        if(operationQueue.at(i)->inInput[j] != NULL){
-                            operationQueue.at(i)->inInput[j]->outCycle = tempCycle;
+                        if(nodes.at(i)->inInput[j] != NULL){
+                            nodes.at(i)->inInput[j]->outCycle = tempCycle;
                         }
                     }
                 }
-                
-                
                 
                 /* Remove currently calculated operation from the operation queue */
                 for(int j = 0; j < (signed)operationQueue.size(); j++){
