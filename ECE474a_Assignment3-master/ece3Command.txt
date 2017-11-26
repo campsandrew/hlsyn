@@ -1,0 +1,1 @@
+./src/hlsyn ~/ECE474a/assignment3_testfiles_full/standard_tests/hls_test1.c 5 ~/ECE474a/assignment3_testfiles_full/results/HLSM_1.v
