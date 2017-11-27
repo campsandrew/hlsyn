@@ -868,7 +868,7 @@ void Module::getForces(vector<Operation *> nodes) {
                         }
                         break;
                     case MUL:
-                        for(int k = nodes.at(j)->frame.min; k <= operations.at(j)->frame.max; k++){
+                        for(int k = nodes.at(j)->frame.min; k <= nodes.at(j)->frame.max; k++){
                             if(i == k){
                                 selfForce += sum_Mul.at(k - 1) * (1 - prop);
                             }else{
