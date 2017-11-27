@@ -42,16 +42,17 @@ private:
     int getID(Operations operation);
     vector<string> split(string const &input);
     bool scheduleOperations();
-    bool getTimeFrames(vector<Operation *> nodes);
-    void resetOutCycles();
+    bool getTimeFrames(vector<Operation *> scheduled ,vector<Operation *> unscheduled);
+    void resetUnscheduled();
+    void resetScheduled(vector<Operation *> scheduled);
     bool getALAPTimes(vector<Operation *> nodes);
     bool getASAPTimes(vector<Operation *> nodes);
     void getTypePropabilities();
     void getTotalForces(vector<Operation *> nodes);
-    void getSelfForces(vector<Operation *> nodes);
-    void getPredecessorForces();
-    void getSuccessorForces();
-    void scheduleNode(vector<Operation *> &nodes);
+    void getForces(vector<Operation *> nodes);
+    double getPredecessorForces(Operation *node, int latency);
+    double getSuccessorForces(Operation *node, int latency);
+    void scheduleNode(vector<Operation *> &scheduled ,vector<Operation *> &unscheduled);
 public:
     Module(string name, int latency);
     string getName() { return name; }

@@ -507,15 +507,16 @@ bool Module::getDataType(string type, int *size){
  */
 bool Module::scheduleOperations() {
     vector<Operation *> unscheduled = operations;
+    vector<Operation *> scheduled;
     
     /* Perform force directed scheduling */
     while(unscheduled.size() != 0){
-        if(!getTimeFrames(unscheduled)){
+        if(!getTimeFrames(scheduled, unscheduled)){
             return false;
         }
         getTypePropabilities();
         getTotalForces(unscheduled);
-        scheduleNode(unscheduled); // Removes scheduled node
+        scheduleNode(scheduled, unscheduled); // Removes scheduled node
     }
     
     return true;
@@ -524,17 +525,19 @@ bool Module::scheduleOperations() {
 /**
  *
  */
-bool Module::getTimeFrames(vector<Operation *> nodes){
+bool Module::getTimeFrames(vector<Operation *> scheduled ,vector<Operation *> unscheduled){
     
     /* Calculate ASAP */
-    resetOutCycles();
-    if(!getASAPTimes(nodes)){
+    resetUnscheduled();
+    resetScheduled(scheduled);
+    if(!getASAPTimes(unscheduled)){
         return false;
     }
     
     /* Calculate ALAP */
-    resetOutCycles();
-    if(!getALAPTimes(nodes)){
+    resetUnscheduled();
+    resetScheduled(scheduled);
+    if(!getALAPTimes(unscheduled)){
         return false;
     }
     
@@ -544,7 +547,7 @@ bool Module::getTimeFrames(vector<Operation *> nodes){
 /**
  *
  */
-void Module::resetOutCycles(){
+void Module::resetUnscheduled(){
     
     /* Resets variables for calculating frames */
     for(auto &i : inputs){
@@ -560,6 +563,33 @@ void Module::resetOutCycles(){
     for(auto &i : variables){
         if(!i->isScheduled){
             i->outCycle = -1;
+        }
+    }
+}
+
+/**
+ *
+ */
+void Module::resetScheduled(vector<Operation *> scheduled){
+    
+    for(int i = 0; i < (unsigned)scheduled.size(); i++){
+        if(scheduled.at(i)->varNext != NULL){
+            scheduled.at(i)->varNext->outCycle = (scheduled.at(i)->scheduledTime + scheduled.at(i)->getCycleDelay()) - 1;
+            scheduled.at(i)->varNext->isScheduled = true;
+        }else{
+            scheduled.at(i)->outNext->outCycle = (scheduled.at(i)->scheduledTime + scheduled.at(i)->getCycleDelay()) - 1;
+            scheduled.at(i)->outNext->isScheduled = true;
+        }
+        for(int j = 0; j < NUM_INPUTS; j++){
+            if(scheduled.at(i)->inVar[j] != NULL){
+                scheduled.at(i)->inVar[j]->outCycle = scheduled.at(i)->scheduledTime;
+                scheduled.at(i)->inVar[j]->isScheduled = true;
+            }else{
+                if(scheduled.at(i)->inInput[j] != NULL){
+                    scheduled.at(i)->inInput[j]->outCycle = scheduled.at(i)->scheduledTime;
+                    scheduled.at(i)->inInput[j]->isScheduled = true;
+                }
+            }
         }
     }
 }
@@ -783,17 +813,18 @@ void Module::getTypePropabilities(){
  */
 void Module::getTotalForces(vector<Operation *> nodes){
     
-    getSelfForces(nodes);
-    getSuccessorForces();
-    getPredecessorForces();
+    getForces(nodes);
     
     for(int i = 0; i < (unsigned)nodes.size(); i++){
         int j = nodes.at(i)->frame.min;
         int tempTime = j;
-        double minForce = nodes.at(i)->selfForces.at(j - 1);
+        double minForce = nodes.at(i)->selfForces.at(j - 1) + nodes.at(i)->sucessorForces.at(j - 1) +
+            nodes.at(i)->predecessorForces.at(j - 1);
         while(j <= nodes.at(i)->frame.max){
-            if(minForce > nodes.at(i)->selfForces.at(j - 1)){
-                minForce = nodes.at(i)->selfForces.at(j - 1);
+            double curForce = nodes.at(i)->selfForces.at(j - 1) + nodes.at(i)->sucessorForces.at(j - 1) +
+                nodes.at(i)->predecessorForces.at(j - 1);
+            if(minForce > curForce){
+                minForce = curForce;
                 tempTime = j;
             }
             j++;
@@ -808,11 +839,13 @@ void Module::getTotalForces(vector<Operation *> nodes){
 /**
  *
  */
-void Module::getSelfForces(vector<Operation *> nodes) {
+void Module::getForces(vector<Operation *> nodes) {
     
-    /* Clear selfForce variables */
+    /* Clear force variables */
     for(int i = 0; i < (unsigned)nodes.size(); i++){
         nodes.at(i)->selfForces.clear();
+        nodes.at(i)->sucessorForces.clear();
+        nodes.at(i)->predecessorForces.clear();
     }
     
     /* Get the self forces at each time in nodes time frame */
@@ -869,72 +902,94 @@ void Module::getSelfForces(vector<Operation *> nodes) {
                         break;
                 }
                 
-                /* Align index with time */
-                while(nodes.at(j)->selfForces.size() < i - 1){
-                    nodes.at(j)->selfForces.push_back(NO_FORCE);
-                }
-                
                 nodes.at(j)->selfForces.push_back(selfForce);
+                nodes.at(j)->sucessorForces.push_back(0.0);
+                nodes.at(j)->predecessorForces.push_back(0.0);
+            }else{
+                nodes.at(j)->selfForces.push_back(NO_FORCE);
+                nodes.at(j)->sucessorForces.push_back(NO_FORCE);
+                nodes.at(j)->predecessorForces.push_back(NO_FORCE);
             }
         }
     }
-}
-
-/**
- *
- */
-void Module::getSuccessorForces() {
+    
+    /* Get the pred and succ forces at each time in nodes time frame */
+    for(int i = 1; i <= Latency; i++){
+        for(int j = 0; j < (unsigned)nodes.size(); j++){
+            if(nodes.at(j)->selfForces.at(i - 1) != NO_FORCE){
+                nodes.at(j)->sucessorForces.at(i - 1) = getSuccessorForces(nodes.at(j), i);
+                nodes.at(j)->predecessorForces.at(i - 1) = getPredecessorForces(nodes.at(j), i);
+            }
+        }
+    }
     
 }
 
 /**
  *
  */
-void Module::getPredecessorForces() {
+double Module::getSuccessorForces(Operation *node, int latency) {
     
+    /* Node successor node */
+    if(node->varNext == NULL){
+        return 0.0;
+    }
+    
+    /* Recursive call to get all successor forces */
+    for(int i = 0; i < (unsigned)node->varNext->toOperations.size(); i++){
+        Operation *suc = node->varNext->toOperations.at(i);
+        if(latency >= suc->frame.min){
+            return suc->selfForces.at(latency) + getSuccessorForces(suc, latency + 1);
+        }
+    }
+    
+    return 0.0;
 }
 
 /**
  *
  */
-void Module::scheduleNode(vector<Operation *> &nodes){
+double Module::getPredecessorForces(Operation *node, int latency) {
+    
+    double predForceSum = 0.0;
+    for(int i = 0; i < NUM_INPUTS; i++){
+        if(node->inVar[i] == NULL){
+            continue;
+        }
+        
+        Operation *pred = node->inVar[i]->fromOperation;
+        if(latency <= pred->frame.max){
+            predForceSum += pred->selfForces.at(latency - 2) + getPredecessorForces(pred, latency - 1);
+        }
+    }
+    
+    return predForceSum;
+}
+
+/**
+ *
+ */
+void Module::scheduleNode(vector<Operation *> &scheduled ,vector<Operation *> &unscheduled){
     double minForce;
-    if(!nodes.empty()){
-        minForce = nodes.at(0)->totalForce;
+    if(!unscheduled.empty()){
+        minForce = unscheduled.at(0)->totalForce;
     }
     
     /* Find node to be scheduled */
     int index = 0;
-    for(int i = 0; i < (unsigned)nodes.size(); i++){
-        if(minForce > nodes.at(i)->totalForce){
-            minForce = nodes.at(i)->totalForce;
+    for(int i = 0; i < (unsigned)unscheduled.size(); i++){
+        if(minForce > unscheduled.at(i)->totalForce){
+            minForce = unscheduled.at(i)->totalForce;
             index = i;
         }
     }
     
     /* Update scheduled node and remove from unscheduled vector */
-    nodes.at(index)->scheduledTime = nodes.at(index)->tempTime;
-    nodes.at(index)->frame.min = nodes.at(index)->scheduledTime;
-    nodes.at(index)->frame.max = nodes.at(index)->scheduledTime;
-    if(nodes.at(index)->varNext != NULL){
-        nodes.at(index)->varNext->outCycle = nodes.at(index)->scheduledTime + nodes.at(index)->getCycleDelay();
-        nodes.at(index)->varNext->isScheduled = true;
-    }else{
-        nodes.at(index)->outNext->outCycle = nodes.at(index)->scheduledTime + nodes.at(index)->getCycleDelay();
-        nodes.at(index)->outNext->isScheduled = true;
-    }
-    for(int i = 0; i < NUM_INPUTS; i++){
-        if(nodes.at(index)->inVar[i] != NULL){
-            nodes.at(index)->inVar[i]->outCycle = nodes.at(index)->scheduledTime + nodes.at(index)->getCycleDelay();
-            nodes.at(index)->inVar[i]->isScheduled = true;
-        }else{
-            if(nodes.at(index)->inInput[i] != NULL){
-                nodes.at(index)->inInput[i]->outCycle = nodes.at(index)->scheduledTime + nodes.at(index)->getCycleDelay();
-                nodes.at(index)->inInput[i]->isScheduled = true;
-            }
-        }
-    }
-    nodes.erase(nodes.begin() + index);
+    unscheduled.at(index)->scheduledTime = unscheduled.at(index)->tempTime;
+    unscheduled.at(index)->frame.min = unscheduled.at(index)->scheduledTime;
+    unscheduled.at(index)->frame.max = unscheduled.at(index)->scheduledTime;
+    scheduled.push_back(unscheduled.at(index));
+    unscheduled.erase(unscheduled.begin() + index);
 }
 
 /**
