@@ -20,8 +20,6 @@
 #include "input.h"
 #include "output.h"
 #include "variable.h"
-#include "node.h"
-#include "type.h"
 
 using namespace std;
 
@@ -30,7 +28,8 @@ enum Type {
     OUTPUT_TYPE,
     VARIABLE_TYPE,
     OPERATION_TYPE,
-    IFELSE_TYPE,
+    IF_TYPE,
+    ELSE_TYPE,
     FORLOOP_TYPE
 };
 
@@ -41,19 +40,23 @@ private:
     bool readFile(string file);
     bool getDataType(string type, int *size);
     bool parseLine(vector<string> line);
+    bool parseOperation(fstream *inFile, vector<string> *line);
     int getID(Operations operation);
     vector<string> split(string const &input);
     bool scheduleOperations();
-    bool getTimeFrames(vector<Operation *> nodes);
-    void resetOutCycles();
+    bool getTimeFrames(vector<Operation *> scheduled ,vector<Operation *> unscheduled);
+    void resetUnscheduled();
+    void resetScheduled(vector<Operation *> scheduled);
     bool getALAPTimes(vector<Operation *> nodes);
     bool getASAPTimes(vector<Operation *> nodes);
     void getTypePropabilities();
     void getTotalForces(vector<Operation *> nodes);
-    void getSelfForces(vector<Operation *> nodes);
-    void getPredecessorForces();
-    void getSuccessorForces();
-    void scheduleNode(vector<Operation *> &nodes);
+    void getForces(vector<Operation *> nodes);
+    double getPredecessorForces(Operation *node, int latency);
+    double getSuccessorForces(Operation *node, int latency);
+    void scheduleNode(vector<Operation *> &scheduled ,vector<Operation *> &unscheduled);
+    int nestedIf(fstream *inFile, string line);
+    bool conditionCheck(string name, int* inIndex, int* varIndex, int* outIndex);
 public:
     Module(string name, int latency);
     string getName() { return name; }
@@ -68,13 +71,6 @@ public:
     vector<double> sum_Mul;
     vector<double> sum_Logic;
     vector<double> sum_DivMod;
-    bool prevIf;
-    int ifIndex;
-    vector<Input *> _inputs;
-    vector<Output *> _outputs;
-    vector<Variable *> _variables;
-    vector<node *> nodes;
-    
 };
 
 #endif /* module_h */

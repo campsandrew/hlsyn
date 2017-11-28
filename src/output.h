@@ -14,13 +14,12 @@
 #include <string>
 
 #include "operation.h"
-#include "type.h"
 
 using namespace std;
 
 class Operation;
 
-class Output: public type {
+class Output {
 private:
     bool usigned;
     int dataWidth;

@@ -35,6 +35,8 @@ enum Operations {
     DIV,
     MOD,
     INC,
+    IF,
+    ELSE,
     DEC
 };
 
@@ -72,9 +74,14 @@ public:
     Variable *varNext;
     Variable *inVar[NUM_INPUTS];
     Input *inInput[NUM_INPUTS];
+    vector<Operation *> inOperations; /* Operations (mainly if statements) that precede current operation */
+    vector<Operation *> nextIf; /* Operations that are executed within an if statement operation */
+    vector<Operation *> nextElse; /* Operations that are executed within an else statement operation */
     TimeFrame frame;
+    int tempTime = 0;
     int scheduledTime = 0;
     double totalForce = 0;
+    bool conditional = false;
     vector<double> selfForces;
     vector<double> predecessorForces;
     vector<double> sucessorForces;
