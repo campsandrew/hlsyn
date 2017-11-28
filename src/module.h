@@ -16,6 +16,7 @@
 #include <vector>
 #include <sstream>
 #include <fstream>
+#include <cmath>
 
 #include "input.h"
 #include "output.h"

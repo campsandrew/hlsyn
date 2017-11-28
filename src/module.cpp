@@ -432,24 +432,59 @@ bool Module::output_module(string file) {
     }
     out << endl;
     
-    /* Prints operations */
-    //for(int i = 0; i < (signed)this->operations.size(); i++){
-    //    out << operations.at(i)->toString() << endl;
-    //}
-    //out << endl;
+    /* Print state info */
+    out << "\treg [" << ceil(log2(Latency + 2)) - 1 << ":0] state;" << endl;
+    out << "\tparameter Wait = 0";
+    for(int i = 1; i <= Latency; i++){
+        out << ", S" << i << " = " << i;
+    }
+    out << " Final = " << Latency + 1 << ";" << endl << endl;
     
-    /* Prints Rst and state transition block */
+    /* Print states and operations */
     out << "\talways @(posedge Clk) begin" << endl;
     out << "\t\tif(Rst) begin" << endl;
     out << "\t\t\tState <= Wait;" << endl;
-    //TODO: Set all regs to 0
+    for(auto &i : outputs){
+        out << "\t\t\t" << i->getName() << " <= 0;" << endl;
+    }
+    for(auto &i : variables){
+        out << "\t\t\t" << i->getName() << " <= 0;" << endl;
+    }
     out << "\t\tend" << endl;
     out << "\t\telse begin" << endl;
-    out << "\t\t\tState <= StateNext;" << endl;
-    out << "\t\tend" << endl;
-    out << "\t" << endl;
+    out << "\t\t\tcase(state)" << endl;
     
-    /* Prints ending */
+    out << "\t\t\t\tWait: begin" << endl;
+    out << "\t\t\t\t\tDone <= 0;" << endl;
+    out << "\t\t\t\t\tif (Start)" << endl;
+    out << "\t\t\t\t\t\tstate <= S1;" << endl;
+    out << "\t\t\t\t\telse" << endl;
+    out << "\t\t\t\t\t\tstate <= Wait;" << endl;
+    out << "\t\t\t\tend" << endl;
+    
+    for(int i = 1; i <= Latency; i++){
+        out << "\t\t\t\tS" << i << ": begin" << endl;
+        for(auto &op : operations){
+            if(op->scheduledTime == i){
+                out << "\t\t\t\t\t" << op->toString() << endl;
+            }
+        }
+        if(i != Latency){
+            out << "\t\t\t\t\tstate <= S" << i + 1 << ";" << endl;
+        }else{
+            out << "\t\t\t\t\tstate <= Final;" << endl;
+        }
+        out << "\t\t\t\tend" << endl;
+    }
+    
+    out << "\t\t\t\tFinal: begin" << endl;
+    out << "\t\t\t\t\tDone <= 1;" << endl;
+    out << "\t\t\t\t\tstate <= Wait;" << endl;
+    out << "\t\t\t\tend" << endl;
+    
+    out << "\t\t\tendcase" << endl;
+    out << "\t\tend" << endl;
+    out << "\tend" << endl;
     out << "endmodule" << endl;
     out.close();
     
