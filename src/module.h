@@ -55,7 +55,7 @@ private:
     double getPredecessorForces(Operation *node, int latency);
     double getSuccessorForces(Operation *node, int latency);
     void scheduleNode(vector<Operation *> &scheduled ,vector<Operation *> &unscheduled);
-    int nestedIf(fstream *inFile, string line);
+    int nestedIf(fstream *inFile, vector<string> *line);
     bool conditionCheck(string name, int* inIndex, int* varIndex, int* outIndex);
 public:
     Module(string name, int latency);

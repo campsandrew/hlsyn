@@ -182,6 +182,13 @@ bool Module::readFile(string file) {
                     /* Grab contents within if statement */
                     getline(in, line);
                     lines = split(line);
+                    
+                    /* Empty line, continue searching until an entry is found */
+                    while (!lines.size()) {
+                        getline(in, line);
+                        lines = split(line);
+                    }
+                    
                     condition = lines.front();
                     
                     while(condition.compare("}")) {
@@ -191,12 +198,9 @@ bool Module::readFile(string file) {
                         /* Deal with a nested if statement */
                         if (!condition.compare("if")) {
                             /* Add nested if statement to dedicated "next if statement" vector */
-                            nestedIfIndex = nestedIf(&in, condition);
+                            nestedIfIndex = nestedIf(&in, &lines);
                             currOp->nextIf.push_back(operations.at(nestedIfIndex));
                             operations[nestedIfIndex]->inOperations.push_back(currOp);
-                        } /* Deal with else statement that for if/else scenario */
-                        else if (!condition.compare("else")) {
-                            
                         } /* Deal with operations inside of the current if statement */
                         else {
                             /* Check existing updated variable/output like before, but parse the operation when found */
@@ -211,6 +215,9 @@ bool Module::readFile(string file) {
                                     if(!parseOperation(&in, &lines)) {
                                         return -11;
                                     }
+                                }
+                                if (ifFlag && elseFlag) {
+                                    operations[currIndex]->nextElse.push_back(operations.at(operations.size() - 1));
                                 }
                                 /* Adding if statement as previous operation for current operation */
                                 operations.at(operations.size() - 1)->inOperations.push_back(operations.at(currIndex));
@@ -228,12 +235,10 @@ bool Module::readFile(string file) {
                         lines = split(line);
                         condition = lines.front();
                     }
-                    
                     if (currIndex == -1) {
                         cout << "Error with processing if statement" << endl;
                         return -28;
                     }
-                    
                     ifFlag = true;
                 }
                     break;
@@ -534,21 +539,22 @@ bool Module::parseOperation(fstream *inFile, vector<string> *line) {
 /**
  *
  */
-int Module::nestedIf(fstream *inFile, string line) {
+int Module::nestedIf(fstream *inFile, vector<string> *line) {
     Operation *currOp = NULL;
     int nestedIfIndex = -1, currOpIndex = -1, inIndex = -1, outIndex = -1, varIndex = -1;
     bool varCheck = false;
+    string tempLine;
     
     currOp = new Operation();
-    currOp->conditional = true;
+    currOp->setOperation(IF);
+    currOp->setOpID(getID(IF));
+    /* SKIPPING WIDTH GENERATION FOR IF OPERATION,
+     POSSIBLY MOVING WIDTH GENERATION AT END OF IF STATEMENT PARSING */
     operations.push_back(currOp);
     currOpIndex = operations.size() - 1;
+    currOp->conditional = true;
     
-    getline(*inFile, line);
-    getline(*inFile, line);
-    
-    vector<string> lines = split(line);
-    string condition = lines.front();
+    string condition = line->at(2);
     
     if (conditionCheck(condition, &inIndex, &varIndex, &outIndex)) {
         if (varIndex != -1) {
@@ -559,38 +565,89 @@ int Module::nestedIf(fstream *inFile, string line) {
         }
     }
     else {
-        cout << "If condition variable does not exist (or something went wrong there). Debug this." << endl;
+        cout << "If condition variable " << condition << " does not exist (or something went wrong there). Debug this." << endl;
         return -1;
     }
     
-    while (line.compare("}")) {
-        getline(*inFile, line);
-        if (!line.compare("if")) {
+    /* Grab contents within if statement */
+    getline(*inFile, tempLine);
+    *line = split(tempLine);
+    
+    /* Empty line, continue searching until an entry is found */
+    while (!line->size()) {
+        getline(*inFile, tempLine);
+        *line = split(tempLine);
+    }
+    
+    condition = line->front();
+    
+    while (condition.compare("}")) {
+        /* Empty line */
+        if (!line->size()) continue;
+        
+        /* Deal with a nested if statement */
+        if (!condition.compare("if")) {
+            /* Add nested if statement to dedicated "next if statement" vector */
             nestedIfIndex = nestedIf(inFile, line);
             currOp->nextIf.push_back(operations.at(nestedIfIndex));
-            
-        }
-        else if (!line.compare("else")) {
-            
-            
+            operations[nestedIfIndex]->inOperations.push_back(currOp);
+        } /* Deal with else statement that for if/else scenario */
+        else if (!condition.compare("else")) {
+            outIndex = -1, inIndex = -1, varIndex = -1;
             if (conditionCheck(condition, &inIndex, &varIndex, &outIndex)) {
                 if (varIndex != -1) {
-                    currOp->inVar[0] = variables.at(varIndex);
+                    if(!parseOperation(inFile, line)) {
+                        return -10;
+                    }
                 }
-                else if (inIndex != -1) {
-                    currOp->inInput[0] = inputs.at(inIndex);
+                else if (outIndex != -1) {
+                    if(!parseOperation(inFile, line)) {
+                        return -11;
+                    }
                 }
+                
+                operations.at(operations.size() - 1)->inOperations.push_back(operations.at(nestedIfIndex));
+                operations[nestedIfIndex]->nextElse.push_back(operations.at(operations.size() - 1));
+                
             }
             else {
-                cout << "If condition variable does not exist (or something went wrong there). Debug this." << endl;
+                cout << "If condition variable " << condition << " does not exist (or something went wrong there). Debug this." << endl;
                 return -1;
             }
             
         }
         else {
+            outIndex = -1, inIndex = -1, varIndex = -1;
+            if (conditionCheck(condition, &inIndex, &varIndex, &outIndex)) {
+                if (varIndex != -1) {
+                    if(!parseOperation(inFile, line)) {
+                        return -10;
+                    }
+                }
+                else if (outIndex != -1) {
+                    if(!parseOperation(inFile, line)) {
+                        return -11;
+                    }
+                }
+                /* Adding if statement as previous operation for current operation */
+                operations.at(operations.size() - 1)->inOperations.push_back(operations.at(currOpIndex));
+                /* Add current operation as next operation for if statement operation */
+                currOp->nextIf.push_back(operations.at(operations.size() - 1));
+            }
+            else {
+                cout << "If condition variable " << condition << " does not exist (or something went wrong there). Debug this." << endl;
+                return -1;
+            }
+            
             
         }
+        
+        /* Grab next line */
+        getline(*inFile, tempLine);
+        *line = split(tempLine);
+        condition = line->front();
     }
+    return currOpIndex;
 }
 
 
