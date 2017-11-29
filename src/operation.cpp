@@ -136,11 +136,11 @@ string Operation::toString(){
         case MUL:
             return out + " <= " + in[0] + " * " + in[1] + ";";
         case COMP_GT:
-            return out + "";
+            return out + " <= " + in[0] + " > " + in[1] + ";";
         case COMP_LT:
-            return out + "";
+            return out + " <= " + in[0] + " < " + in[1] + ";";
         case COMP_EQ:
-            return out + "";
+            return out + " <= " + in[0] + " == " + in[1] + ";";
         case SHR:
             return out + " <= " + in[0] + " >> " + in[1] + ";";
         case SHL:

@@ -20,7 +20,10 @@ Module::Module(string name, int latency){
 
 bool Module::build_module(string file) {
     int status = readFile(file) ? true : false;
-    scheduleOperations();
+    if(!status){
+        return status;
+    }
+    status = scheduleOperations();
     
     return status;
 }
@@ -157,6 +160,7 @@ bool Module::parseLine(vector<string> line) {
             line.erase(line.begin());
         }
     } else if(lineType == IFELSE_TYPE || lineType == FORLOOP_TYPE) {
+        
         
     } else {
         
@@ -610,6 +614,7 @@ void Module::resetScheduled(vector<Operation *> scheduled){
     for(int i = 0; i < (unsigned)scheduled.size(); i++){
         if(scheduled.at(i)->varNext != NULL){
             scheduled.at(i)->varNext->outCycle = (scheduled.at(i)->scheduledTime + scheduled.at(i)->getCycleDelay()) - 1;
+            scheduled.at(i)->varNext->permOutCycle = scheduled.at(i)->scheduledTime;
             scheduled.at(i)->varNext->isScheduled = true;
         }else{
             scheduled.at(i)->outNext->outCycle = (scheduled.at(i)->scheduledTime + scheduled.at(i)->getCycleDelay()) - 1;
@@ -617,11 +622,21 @@ void Module::resetScheduled(vector<Operation *> scheduled){
         }
         for(int j = 0; j < NUM_INPUTS; j++){
             if(scheduled.at(i)->inVar[j] != NULL){
-                scheduled.at(i)->inVar[j]->outCycle = scheduled.at(i)->scheduledTime;
+                if(!scheduled.at(i)->inVar[j]->isScheduled){
+                    scheduled.at(i)->inVar[j]->outCycle = scheduled.at(i)->scheduledTime;
+                    scheduled.at(i)->inVar[j]->permOutCycle = scheduled.at(i)->scheduledTime;
+                }else{
+                    scheduled.at(i)->inVar[j]->outCycle = scheduled.at(i)->inVar[j]->permOutCycle;
+                }
                 scheduled.at(i)->inVar[j]->isScheduled = true;
             }else{
                 if(scheduled.at(i)->inInput[j] != NULL){
-                    scheduled.at(i)->inInput[j]->outCycle = scheduled.at(i)->scheduledTime;
+                    if(!scheduled.at(i)->inInput[j]->isScheduled){
+                        scheduled.at(i)->inInput[j]->outCycle = scheduled.at(i)->scheduledTime;
+                        scheduled.at(i)->inInput[j]->permOutCycle = scheduled.at(i)->scheduledTime;
+                    }else{
+                        scheduled.at(i)->inInput[j]->outCycle = scheduled.at(i)->inInput[j]->permOutCycle;
+                    }
                     scheduled.at(i)->inInput[j]->isScheduled = true;
                 }
             }
@@ -701,6 +716,12 @@ bool Module::getASAPTimes(vector<Operation *> nodes) {
 bool Module::getALAPTimes(vector<Operation *> nodes) {
     vector<Operation *> operationQueue = nodes;
     
+    for(auto &i : nodes){
+        if(i->varNext != NULL){
+            i->isUpdated = false;
+        }
+    }
+    
     /* Loop until all variables and output delays have been updated */
     while(operationQueue.size() > 0){
         
@@ -712,10 +733,14 @@ bool Module::getALAPTimes(vector<Operation *> nodes) {
             double maxInCycle = Latency + 1;
             
             if(nodes.at(i)->varNext != NULL){
-                if(nodes.at(i)->varNext->outCycle == -1){
-                    inCyclesCalculated = false;
-                    continue;
-                }else{
+                for(auto &op : nodes.at(i)->varNext->toOperations){
+                    if(!op->isUpdated || nodes.at(i)->varNext->outCycle == -1){
+                        inCyclesCalculated = false;
+                        break;
+                    }
+                }
+                
+                if(inCyclesCalculated){
                     maxInCycle = nodes.at(i)->varNext->outCycle;
                 }
             }
@@ -732,7 +757,9 @@ bool Module::getALAPTimes(vector<Operation *> nodes) {
                 nodes.at(i)->frame.max = tempCycle;
                 for(int j = 0; j < NUM_INPUTS; j++){
                     if(nodes.at(i)->inVar[j] != NULL){
-                        nodes.at(i)->inVar[j]->outCycle = tempCycle;
+                        if(nodes.at(i)->inVar[j]->outCycle == -1 || tempCycle < nodes.at(i)->inVar[j]->outCycle){
+                            nodes.at(i)->inVar[j]->outCycle = tempCycle;
+                        }
                     }else{
                         if(nodes.at(i)->inInput[j] != NULL){
                             nodes.at(i)->inInput[j]->outCycle = tempCycle;
@@ -746,6 +773,7 @@ bool Module::getALAPTimes(vector<Operation *> nodes) {
                        && nodes.at(i)->getOpID() == operationQueue.at(j)->getOpID()){
                         operationQueue.erase(operationQueue.begin() + j);
                         opRemoved = true;
+                        nodes.at(i)->isUpdated = true;
                         break;
                     }
                 }

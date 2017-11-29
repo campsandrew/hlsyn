@@ -34,6 +34,7 @@ public:
     Operation *fromOperation;
     vector<Operation *> toOperations;
     int outCycle = 0;
+    int permOutCycle = 0;
     bool isScheduled = false;
 };
 
