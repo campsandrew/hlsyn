@@ -229,6 +229,7 @@ bool Module::readFile(string file) {
                                 return -15;
                             }
                         }
+                        ifFlag = true;
                         
                         /* Grab next line */
                         getline(in, line);
