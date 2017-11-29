@@ -14,6 +14,7 @@
 #include "output.h"
 #include "input.h"
 #include "variable.h"
+#include "ifelse.h"
 
 #define NUM_INPUTS 3
 #define INTERVAL_MAX 1
@@ -35,7 +36,8 @@ enum Operations {
     DIV,
     MOD,
     INC,
-    DEC
+    DEC,
+    IFELSE
 };
 
 typedef struct TimeFrame {
@@ -49,6 +51,7 @@ typedef struct TimeFrame {
 class Variable;
 class Input;
 class Output;
+class IfElse;
 
 class Operation {
 private:
@@ -80,6 +83,11 @@ public:
     vector<double> selfForces;
     vector<double> predecessorForces;
     vector<double> sucessorForces;
+    
+    IfElse *ifelse;                     /**< If this is an ifelse operation */
+    bool inIfElse = false;              /**< If this operation is in an ifelse block */
+    vector<Variable *> incomingVars;    /**< Variables that the if statement relies on */
+    vector<Variable *> dependentVars;   /**< Variables that are dependent on the if statement */
 };
 
 #endif /* operation_h */

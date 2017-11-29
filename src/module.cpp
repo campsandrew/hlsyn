@@ -91,11 +91,23 @@ bool Module::parseLine(vector<string> line) {
     else if(type.compare("variable") == 0){
         line.erase(line.begin());
         lineType = VARIABLE_TYPE;
-    } /* If else */
+    } /* If */
     else if(type.compare("if") == 0){
         line.erase(line.begin());
-        lineType = IFELSE_TYPE;
-    } /* For loop */
+        lineType = IF_TYPE;
+    } /* Else */
+    else if(type.compare("else") == 0){
+        line.erase(line.begin());
+        lineType = ELSE_TYPE;
+    }
+    else if(type.compare("}") == 0){
+        line.erase(line.begin());
+        if(line.size() != 0){
+            cout << "ERROR: Invalid if else bracket syntax" << endl;
+            return false;
+        }
+        lineType = BRACKET_TYPE;
+    }/* For loop */
     else if(type.compare("for") == 0){
         line.erase(line.begin());
         lineType = FORLOOP_TYPE;
@@ -159,9 +171,89 @@ bool Module::parseLine(vector<string> line) {
             
             line.erase(line.begin());
         }
-    } else if(lineType == IFELSE_TYPE || lineType == FORLOOP_TYPE) {
+    } else if(lineType == IF_TYPE) {
         
+        /* Invalid line */
+        if(!line.size()){
+            cout << "ERROR: Invalid if statement syntax" << endl;
+            return false;
+        }
+        /* Invalid line */
+        line.erase(line.begin());
+        if(!line.size()){
+            cout << "ERROR: Invalid if statement syntax" << endl;
+            return false;
+        }
         
+        /* Create new ifelse and operation objects */
+        IfElse *newIfElse = new IfElse();
+        Operation *newOp = new Operation();
+        newOp->ifelse = newIfElse;
+        
+        /* Assign condition statement to ifelse operation */
+        bool assigned = false;
+        string condition = line.front();
+        for(int i = 0; i < (signed)this->inputs.size(); i++){
+            if(condition.compare(outputs.at(i)->getName()) == 0){
+                newIfElse->inputCondition = inputs.at(i);
+                assigned = true;
+                break;
+            }
+        }
+        if(!assigned){
+            for(int i = 0; i < (signed)this->variables.size(); i++){
+                if(condition.compare(variables.at(i)->getName()) == 0){
+                    newIfElse->varCondition = variables.at(i);
+                    assigned = true;
+                    break;
+                }
+            }
+        }
+        
+        /* No assignment was defined */
+        if(!assigned){
+            cout << "ERROR: Missing condtion for if statement: " << condition << endl;
+            return false;
+        }
+        
+        /* Invalid line */
+        line.erase(line.begin());
+        if(!line.size()){
+            cout << "ERROR: Invalid if statement syntax" << endl;
+            return false;
+        }
+        /* Invalid line */
+        line.erase(line.begin());
+        if(!line.size()){
+            cout << "ERROR: Invalid if statement syntax" << endl;
+            return false;
+        }
+        
+        this->operations.push_back(newOp);
+        this->openBlocks.insert(openBlocks.begin(), newIfElse);
+    }else if(lineType == ELSE_TYPE){
+        /* Addes else block to open else block queue */
+        this->openBlocks.insert(openBlocks.begin(), this->elseCheck);
+        this->elseCheck->inElseBlock = true;
+        
+        /* Invalid line */
+        if(!line.size()){
+            cout << "ERROR: Invalid if statement syntax" << endl;
+            return false;
+        }
+        /* Invalid line */
+        line.erase(line.begin());
+        if(!line.size()){
+            cout << "ERROR: Invalid if statement syntax" << endl;
+            return false;
+        }
+    } else if(lineType == BRACKET_TYPE){
+        /* Close off a if else block when a close bracket is parsed */
+        this->elseCheck = openBlocks.front();
+        this->openBlocks.front()->inElseBlock = false;
+        this->openBlocks.erase(openBlocks.begin());
+    } else if(lineType == FORLOOP_TYPE){
+        //TODO: For loop if time
     } else {
         
         /* Checks to see if the first variable is an output type */
@@ -169,7 +261,6 @@ bool Module::parseLine(vector<string> line) {
         string var = line.front();
         Operation *newOp = new Operation();
         for(int i = 0; i < (signed)this->outputs.size(); i++){
-            /* Check if this is a not REG operation to output */
             if(var.compare(outputs.at(i)->getName()) == 0){
                 newOp->outNext = outputs.at(i);
                 outputs.at(i)->fromOperation = newOp;
