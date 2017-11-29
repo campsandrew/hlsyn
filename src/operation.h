@@ -84,10 +84,11 @@ public:
     vector<double> predecessorForces;
     vector<double> sucessorForces;
     
+    /* IfElse object type variables */
     IfElse *ifelse;                     /**< If this is an ifelse operation */
     bool inIfElse = false;              /**< If this operation is in an ifelse block */
     vector<Variable *> incomingVars;    /**< Variables that the if statement relies on */
-    vector<Variable *> dependentVars;   /**< Variables that are dependent on the if statement */
+    vector<Variable *> outgoingVars;   /**< Variables that are dependent on the if statement */
 };
 
 #endif /* operation_h */

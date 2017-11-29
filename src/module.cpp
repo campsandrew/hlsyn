@@ -23,7 +23,7 @@ bool Module::build_module(string file) {
     if(!status){
         return status;
     }
-    status = scheduleOperations();
+    //status = scheduleOperations();
     
     return status;
 }
@@ -188,13 +188,14 @@ bool Module::parseLine(vector<string> line) {
         /* Create new ifelse and operation objects */
         IfElse *newIfElse = new IfElse();
         Operation *newOp = new Operation();
+        newOp->setOperation(IFELSE);
         newOp->ifelse = newIfElse;
         
         /* Assign condition statement to ifelse operation */
         bool assigned = false;
         string condition = line.front();
         for(int i = 0; i < (signed)this->inputs.size(); i++){
-            if(condition.compare(outputs.at(i)->getName()) == 0){
+            if(condition.compare(inputs.at(i)->getName()) == 0){
                 newIfElse->inputCondition = inputs.at(i);
                 assigned = true;
                 break;
@@ -228,29 +229,80 @@ bool Module::parseLine(vector<string> line) {
             cout << "ERROR: Invalid if statement syntax" << endl;
             return false;
         }
-        
-        this->operations.push_back(newOp);
-        this->openBlocks.insert(openBlocks.begin(), newIfElse);
+
+        /* For nested if statements */
+        if(!this->openBlocks.size()){
+            /* Add all variables the if statement is dependent on */
+            for(auto &i : operations){
+                if(i->varNext != NULL){
+                    bool added = false;
+                    for(auto &j : newOp->incomingVars){
+                        if(j->getName().compare(i->varNext->getName()) == 0){
+                            added = true;
+                            break;
+                        }
+                    }
+                    
+                    if(!added){
+                        newOp->incomingVars.push_back(i->varNext);
+                    }
+                }
+            }
+            this->operations.push_back(newOp);
+        }else{
+            /* Add all variables the if statement is dependent on */
+            for(auto &i : openBlocks.front()->ifelse->ifOperations){
+                if(i->varNext != NULL){
+                    bool added = false;
+                    for(auto &j : newOp->incomingVars){
+                        if(j->getName().compare(i->varNext->getName()) == 0){
+                            added = true;
+                            break;
+                        }
+                    }
+                    
+                    if(!added){
+                        newOp->incomingVars.push_back(i->varNext);
+                    }
+                }
+            }
+            for(auto &i : openBlocks.front()->ifelse->elseOperations){
+                if(i->varNext != NULL){
+                    bool added = false;
+                    for(auto &j : newOp->incomingVars){
+                        if(j->getName().compare(i->varNext->getName()) == 0){
+                            added = true;
+                            break;
+                        }
+                    }
+                    
+                    if(!added){
+                        newOp->incomingVars.push_back(i->varNext);
+                    }
+                }
+            }
+            if(openBlocks.front()->ifelse->inElseBlock){
+                this->openBlocks.front()->ifelse->elseOperations.push_back(newOp);
+            }else{
+                this->openBlocks.front()->ifelse->ifOperations.push_back(newOp);
+            }
+        }
+        this->openBlocks.insert(openBlocks.begin(), newOp);
     }else if(lineType == ELSE_TYPE){
         /* Addes else block to open else block queue */
         this->openBlocks.insert(openBlocks.begin(), this->elseCheck);
-        this->elseCheck->inElseBlock = true;
+        this->elseCheck->ifelse->inElseBlock = true;
         
         /* Invalid line */
         if(!line.size()){
             cout << "ERROR: Invalid if statement syntax" << endl;
             return false;
         }
-        /* Invalid line */
-        line.erase(line.begin());
-        if(!line.size()){
-            cout << "ERROR: Invalid if statement syntax" << endl;
-            return false;
-        }
+
     } else if(lineType == BRACKET_TYPE){
         /* Close off a if else block when a close bracket is parsed */
         this->elseCheck = openBlocks.front();
-        this->openBlocks.front()->inElseBlock = false;
+        this->openBlocks.front()->ifelse->inElseBlock = false;
         this->openBlocks.erase(openBlocks.begin());
     } else if(lineType == FORLOOP_TYPE){
         //TODO: For loop if time
@@ -272,6 +324,22 @@ bool Module::parseLine(vector<string> line) {
             for(int i = 0; i < (signed)this->variables.size(); i++){
                 if(var.compare(variables.at(i)->getName()) == 0){
                     newOp->varNext = variables.at(i);
+                    /* Add to outgoing if block variables */
+                    if(openBlocks.size() > 0){
+                        for(auto &op : openBlocks){
+                            bool added = false;
+                            for(auto &j : op->outgoingVars){
+                                if(j->getName().compare(variables.at(i)->getName()) == 0){
+                                    added = true;
+                                    break;
+                                }
+                            }
+                            
+                            if(!added){
+                                op->outgoingVars.push_back(variables.at(i));
+                            }
+                        }
+                    }
                     variables.at(i)->fromOperation = newOp;
                     assigned = true;
                     break;
@@ -336,7 +404,15 @@ bool Module::parseLine(vector<string> line) {
                 newOp->setOpID(getID(INC));
                 newOp->calcWidth();
                 newOp->setSign();
-                this->operations.push_back(newOp);
+                if(!this->openBlocks.size()){
+                    this->operations.push_back(newOp);
+                }else{
+                    if(openBlocks.front()->ifelse->inElseBlock){
+                        this->openBlocks.front()->ifelse->elseOperations.push_back(newOp);
+                    }else{
+                        this->openBlocks.front()->ifelse->ifOperations.push_back(newOp);
+                    }
+                }
                 return true;
             }
             newOp->setOperation(ADD);
@@ -350,7 +426,15 @@ bool Module::parseLine(vector<string> line) {
                 newOp->setOpID(getID(DEC));
                 newOp->calcWidth();
                 newOp->setSign();
-                this->operations.push_back(newOp);
+                if(!this->openBlocks.size()){
+                    this->operations.push_back(newOp);
+                }else{
+                    if(openBlocks.front()->ifelse->inElseBlock){
+                        this->openBlocks.front()->ifelse->elseOperations.push_back(newOp);
+                    }else{
+                        this->openBlocks.front()->ifelse->ifOperations.push_back(newOp);
+                    }
+                }
                 return true;
             }
             newOp->setOperation(SUB);
@@ -467,7 +551,15 @@ bool Module::parseLine(vector<string> line) {
         /* Adds operation to module */
         newOp->calcWidth();
         newOp->setSign();
-        this->operations.push_back(newOp);
+        if(!this->openBlocks.size()){
+            this->operations.push_back(newOp);
+        }else{
+            if(openBlocks.front()->ifelse->inElseBlock){
+                this->openBlocks.front()->ifelse->elseOperations.push_back(newOp);
+            }else{
+                this->openBlocks.front()->ifelse->ifOperations.push_back(newOp);
+            }
+        }
         
     }
     

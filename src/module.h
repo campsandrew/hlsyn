@@ -67,13 +67,13 @@ public:
     vector<Output *> outputs;
     vector<Input *> inputs;
     vector<Variable *> variables;
-    vector<IfElse *> ifelses;
     vector<double> sum_AddSub;
     vector<double> sum_Mul;
     vector<double> sum_Logic;
     vector<double> sum_DivMod;
-    vector<IfElse *> openBlocks;        /**< A queue of open if else blocks */
-    IfElse *elseCheck;                  /**< Points to if block in case of following else statement */
+    
+    vector<Operation *> openBlocks;        /**< A queue of open if else blocks */
+    Operation *elseCheck;                      /**< Points to if block in case of following else statement */
 };
 
 #endif /* module_h */
