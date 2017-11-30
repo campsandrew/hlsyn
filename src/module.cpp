@@ -23,7 +23,7 @@ bool Module::build_module(string file) {
     if(!status){
         return status;
     }
-    //status = scheduleOperations();
+    status = scheduleOperations(operations, 0, Latency);
     
     return status;
 }
@@ -245,6 +245,7 @@ bool Module::parseLine(vector<string> line) {
                     
                     if(!added){
                         newOp->incomingVars.push_back(i->varNext);
+                        i->varNext->toOperations.push_back(newOp);
                     }
                 }
             }
@@ -263,6 +264,7 @@ bool Module::parseLine(vector<string> line) {
                     
                     if(!added){
                         newOp->incomingVars.push_back(i->varNext);
+                        i->varNext->toOperations.push_back(newOp);
                     }
                 }
             }
@@ -278,6 +280,7 @@ bool Module::parseLine(vector<string> line) {
                     
                     if(!added){
                         newOp->incomingVars.push_back(i->varNext);
+                        i->varNext->toOperations.push_back(newOp);
                     }
                 }
             }
@@ -651,17 +654,25 @@ bool Module::output_module(string file) {
     
     for(int i = 1; i <= Latency; i++){
         out << "\t\t\t\tS" << i << ": begin" << endl;
+        bool status = false;
         for(auto &op : operations){
             if(op->scheduledTime == i){
-                out << "\t\t\t\t\t" << op->toString() << endl;
+                if(op->getOperation() != IFELSE){
+                    out << "\t\t\t\t\t" << op->toString() << endl;
+                }else{
+                    status = outputIfBlock(op);
+                }
             }
         }
-        if(i != Latency){
-            out << "\t\t\t\t\tstate <= S" << i + 1 << ";" << endl;
-        }else{
-            out << "\t\t\t\t\tstate <= Final;" << endl;
+        
+        if(!status){
+            if(i != Latency){
+                out << "\t\t\t\t\tstate <= S" << i + 1 << ";" << endl;
+            }else{
+                out << "\t\t\t\t\tstate <= Final;" << endl;
+            }
+            out << "\t\t\t\tend" << endl;
         }
-        out << "\t\t\t\tend" << endl;
     }
     
     out << "\t\t\t\tFinal: begin" << endl;
@@ -674,6 +685,12 @@ bool Module::output_module(string file) {
     out << "\tend" << endl;
     out << "endmodule" << endl;
     out.close();
+    
+    return true;
+}
+
+bool Module::outputIfBlock(Operation *node){
+    
     
     return true;
 }
@@ -727,18 +744,41 @@ bool Module::getDataType(string type, int *size){
 /**
  *
  */
-bool Module::scheduleOperations() {
-    vector<Operation *> unscheduled = operations;
+bool Module::scheduleOperations(vector<Operation *> nodes, int min, int max) {
+    vector<Operation *> unscheduled = nodes;
     vector<Operation *> scheduled;
     
     /* Perform force directed scheduling */
     while(unscheduled.size() != 0){
-        if(!getTimeFrames(scheduled, unscheduled)){
-            return false;
+        bool onlyIfelse = true;
+        for(auto &i : unscheduled){
+            if(i->getOperation() != IFELSE){
+                onlyIfelse = false;
+                break;
+            }
         }
-        getTypePropabilities();
-        getTotalForces(unscheduled);
-        scheduleNode(scheduled, unscheduled); // Removes scheduled node
+        
+        if(!onlyIfelse){
+            if(!getTimeFrames(scheduled, unscheduled, min, max)){
+                return false;
+            }
+            getTypePropabilities();
+            getTotalForces(unscheduled);
+            scheduleNode(scheduled, unscheduled); // Removes scheduled node
+        }else{
+            scheduleOperations(unscheduled.front()->ifelse->ifOperations, unscheduled.front()->frame.min - 1, unscheduled.front()->frame.max);
+            //TODO: Schedule else operations
+            int time = 0;
+            for(auto &i : unscheduled.front()->incomingVars){
+                int temp = (i->fromOperation->scheduledTime + i->fromOperation->getCycleDelay()) - 1;
+                if(temp > time){
+                    time = temp;
+                }
+            }
+            unscheduled.front()->ifelse->ifTimeSchedule = time - 1;
+            scheduled.push_back(unscheduled.front());
+            unscheduled.erase(unscheduled.begin());
+        }
     }
     
     return true;
@@ -747,19 +787,19 @@ bool Module::scheduleOperations() {
 /**
  *
  */
-bool Module::getTimeFrames(vector<Operation *> scheduled ,vector<Operation *> unscheduled){
+bool Module::getTimeFrames(vector<Operation *> scheduled, vector<Operation *> unscheduled, int min, int max){
     
     /* Calculate ASAP */
-    resetUnscheduled();
-    resetScheduled(scheduled);
-    if(!getASAPTimes(unscheduled)){
+    resetUnscheduled(unscheduled, true);
+    resetScheduled(scheduled, false);
+    if(!getASAPTimes(unscheduled, min)){
         return false;
     }
     
     /* Calculate ALAP */
-    resetUnscheduled();
-    resetScheduled(scheduled);
-    if(!getALAPTimes(unscheduled)){
+    resetUnscheduled(unscheduled, false);
+    resetScheduled(scheduled, true);
+    if(!getALAPTimes(unscheduled, max)){
         return false;
     }
     
@@ -769,7 +809,7 @@ bool Module::getTimeFrames(vector<Operation *> scheduled ,vector<Operation *> un
 /**
  *
  */
-void Module::resetUnscheduled(){
+void Module::resetUnscheduled(vector<Operation *> unscheduled, bool ASAP){
     
     /* Resets variables for calculating frames */
     for(auto &i : inputs){
@@ -787,18 +827,54 @@ void Module::resetUnscheduled(){
             i->outCycle = -1;
         }
     }
+    
+    for(auto &i : unscheduled){
+        if(ASAP){
+            i->frame.min = 0;
+            if(i->getOperation() == IFELSE){
+                for(auto &j : i->ifelse->ifOperations){
+                    j->frame.min = 0;
+                }
+                for(auto &j : i->ifelse->elseOperations){
+                    j->frame.min = 0;
+                }
+            }
+        }else{
+            i->frame.max = 0;
+            if(i->getOperation() == IFELSE){
+                for(auto &j : i->ifelse->ifOperations){
+                    j->frame.max = 0;
+                }
+                for(auto &j : i->ifelse->elseOperations){
+                    j->frame.max = 0;
+                }
+            }
+        }
+    }
 }
 
 /**
  *
  */
-void Module::resetScheduled(vector<Operation *> scheduled){
+void Module::resetScheduled(vector<Operation *> scheduled, bool ALAP){
     
     for(int i = 0; i < (unsigned)scheduled.size(); i++){
         if(scheduled.at(i)->varNext != NULL){
-            scheduled.at(i)->varNext->outCycle = (scheduled.at(i)->scheduledTime + scheduled.at(i)->getCycleDelay()) - 1;
-            scheduled.at(i)->varNext->permOutCycle = scheduled.at(i)->scheduledTime;
-            scheduled.at(i)->varNext->isScheduled = true;
+            bool notApart = true;
+            for(auto &j : scheduled.at(i)->varNext->toOperations){
+                if(j->getOperation() == IFELSE && ALAP){
+                    notApart = false;
+                    break;
+                }
+            }
+            
+            if(notApart){
+                scheduled.at(i)->varNext->outCycle = (scheduled.at(i)->scheduledTime + scheduled.at(i)->getCycleDelay()) - 1;
+                scheduled.at(i)->varNext->permOutCycle = scheduled.at(i)->scheduledTime;
+                scheduled.at(i)->varNext->isScheduled = true;
+            }else{
+                scheduled.at(i)->varNext->outCycle = -1;
+            }
         }else{
             scheduled.at(i)->outNext->outCycle = (scheduled.at(i)->scheduledTime + scheduled.at(i)->getCycleDelay()) - 1;
             scheduled.at(i)->outNext->isScheduled = true;
@@ -830,7 +906,7 @@ void Module::resetScheduled(vector<Operation *> scheduled){
 /**
  *
  */
-bool Module::getASAPTimes(vector<Operation *> nodes) {
+bool Module::getASAPTimes(vector<Operation *> nodes, int startTime) {
     vector<Operation *> operationQueue = nodes;
     
     /* Loop until all variables and output delays have been updated */
@@ -838,24 +914,37 @@ bool Module::getASAPTimes(vector<Operation *> nodes) {
         
         /* Iterate through all operations to update delays */
         bool opRemoved = false;
-        for (int i = 0; i < (signed)nodes.size(); i++) {
+        for (int i = 0; i < (unsigned)nodes.size(); i++) {
             bool inCyclesCalculated = true;
             double tempCycle = 0;
-            double maxInCycle = 0;
+            double maxInCycle = startTime;
             
             /* Get the current maximum delay from operation inputs */
-            for(int j = 0; j < NUM_INPUTS; j++){
-                if(nodes.at(i)->inVar[j] != NULL){
-                    if(nodes.at(i)->inVar[j]->outCycle == -1){
+            if(nodes.at(i)->getOperation() != IFELSE){
+                for(int j = 0; j < NUM_INPUTS; j++){
+                    if(nodes.at(i)->inVar[j] != NULL){
+                        if(nodes.at(i)->inVar[j]->outCycle == -1){
+                            inCyclesCalculated = false;
+                            break;
+                        }else{
+                            if(maxInCycle < nodes.at(i)->inVar[j]->outCycle){
+                                maxInCycle = nodes.at(i)->inVar[j]->outCycle;
+                            }
+                        }
+                    }else{
+                        continue;
+                    }
+                }
+            }else{
+                for(auto &j : nodes.at(i)->incomingVars){
+                    if(j->outCycle == -1){
                         inCyclesCalculated = false;
                         break;
                     }else{
-                        if(maxInCycle < nodes.at(i)->inVar[j]->outCycle){
-                            maxInCycle = nodes.at(i)->inVar[j]->outCycle;
+                        if(maxInCycle < j->outCycle){
+                            maxInCycle = j->outCycle;
                         }
                     }
-                }else{
-                    continue;
                 }
             }
             
@@ -864,11 +953,18 @@ bool Module::getASAPTimes(vector<Operation *> nodes) {
                 
                 /* Pass delay of operation output */
                 nodes.at(i)->frame.min = maxInCycle + 1;
-                tempCycle = maxInCycle + nodes.at(i)->getCycleDelay();
-                if(nodes.at(i)->varNext != NULL){
-                    nodes.at(i)->varNext->outCycle = tempCycle;
+                if(nodes.at(i)->getOperation() != IFELSE){
+                    tempCycle = maxInCycle + nodes.at(i)->getCycleDelay();
+                    if(nodes.at(i)->varNext != NULL){
+                        nodes.at(i)->varNext->outCycle = tempCycle;
+                    }else{
+                        nodes.at(i)->outNext->outCycle = tempCycle;
+                    }
                 }else{
-                    nodes.at(i)->outNext->outCycle = tempCycle;
+                    if(!getASAPTimes(nodes.at(i)->ifelse->ifOperations, nodes.at(i)->frame.min - 1)){
+                        return false;
+                    }
+                    //TODO: Recursive call for else block
                 }
                 
                 /* Remove currently calculated operation from the operation queue */
@@ -896,11 +992,15 @@ bool Module::getASAPTimes(vector<Operation *> nodes) {
 /**
  *
  */
-bool Module::getALAPTimes(vector<Operation *> nodes) {
+bool Module::getALAPTimes(vector<Operation *> nodes, int endTime) {
     vector<Operation *> operationQueue = nodes;
     
     for(auto &i : nodes){
-        if(i->varNext != NULL){
+        if(i->getOperation() != IFELSE){
+            if(i->varNext != NULL){
+                i->isUpdated = false;
+            }
+        }else{
             i->isUpdated = false;
         }
     }
@@ -913,18 +1013,37 @@ bool Module::getALAPTimes(vector<Operation *> nodes) {
         for (int i = 0; i < (unsigned)nodes.size(); i++) {
             bool inCyclesCalculated = true;
             double tempCycle = 0;
-            double maxInCycle = Latency + 1;
+            double maxInCycle = endTime + 1;
             
-            if(nodes.at(i)->varNext != NULL){
-                for(auto &op : nodes.at(i)->varNext->toOperations){
-                    if(!op->isUpdated || nodes.at(i)->varNext->outCycle == -1){
-                        inCyclesCalculated = false;
-                        break;
+            if(nodes.at(i)->frame.max != 0){
+                continue;
+            }
+            
+            if(nodes.at(i)->getOperation() != IFELSE){
+                if(nodes.at(i)->varNext != NULL){
+                    for(auto &op : nodes.at(i)->varNext->toOperations){
+                        if(!op->isUpdated || nodes.at(i)->varNext->outCycle == -1){
+                            inCyclesCalculated = false;
+                            break;
+                        }
+                    }
+                    
+                    if(inCyclesCalculated){
+                        maxInCycle = nodes.at(i)->varNext->outCycle;
                     }
                 }
-                
-                if(inCyclesCalculated){
-                    maxInCycle = nodes.at(i)->varNext->outCycle;
+            }else{
+                for(auto &var : nodes.at(i)->outgoingVars){
+                    for(auto &op : var->toOperations){
+                        if((!op->isUpdated || var->outCycle == -1) && op->getOperation() != IFELSE){
+                            inCyclesCalculated = false;
+                            break;
+                        }
+                    }
+                    
+                    if(inCyclesCalculated && maxInCycle > var->outCycle){
+                        maxInCycle = var->outCycle;
+                    }
                 }
             }
             
@@ -932,26 +1051,51 @@ bool Module::getALAPTimes(vector<Operation *> nodes) {
             if(inCyclesCalculated){
                 
                 /* Pass delay of operation output */
-                tempCycle = maxInCycle - nodes.at(i)->getCycleDelay();
+                if(nodes.at(i)->getOperation() != IFELSE){
+                    tempCycle = maxInCycle - nodes.at(i)->getCycleDelay();
+                    for(int j = 0; j < NUM_INPUTS; j++){
+                        if(nodes.at(i)->inVar[j] != NULL){
+                            if(nodes.at(i)->inVar[j]->outCycle == -1 || tempCycle < nodes.at(i)->inVar[j]->outCycle){
+                                nodes.at(i)->inVar[j]->outCycle = tempCycle;
+                            }
+                        }else{
+                            if(nodes.at(i)->inInput[j] != NULL){
+                                nodes.at(i)->inInput[j]->outCycle = tempCycle;
+                            }
+                        }
+                    }
+                }else{
+                    nodes.at(i)->isUpdated = true;
+                    if(!getALAPTimes(nodes.at(i)->ifelse->ifOperations, maxInCycle)){
+                        return false;
+                    }
+                    
+                    /* Update all variables to continue Alap process */
+                    tempCycle = maxInCycle;
+                    for(auto &j : nodes.at(i)->ifelse->ifOperations){
+                        if(j->frame.max < tempCycle){
+                            tempCycle = j->frame.max;
+                        }
+                    }
+                    for(auto &j : nodes.at(i)->incomingVars){
+                        if(tempCycle < j->outCycle){
+                            j->outCycle = tempCycle;
+                        }
+                    }
+                    nodes.at(i)->ifelse->varCondition->outCycle = tempCycle;
+                    
+                    //TODO: Recursive call for else block
+                }
+                
+                /* Checks if graph fits in latency contraint */
+                nodes.at(i)->frame.max = tempCycle;
                 if(tempCycle < 1){
                     cout << "ERROR: Not enough cycles to schedule graph" << endl;
                     return false;
                 }
-                nodes.at(i)->frame.max = tempCycle;
-                for(int j = 0; j < NUM_INPUTS; j++){
-                    if(nodes.at(i)->inVar[j] != NULL){
-                        if(nodes.at(i)->inVar[j]->outCycle == -1 || tempCycle < nodes.at(i)->inVar[j]->outCycle){
-                            nodes.at(i)->inVar[j]->outCycle = tempCycle;
-                        }
-                    }else{
-                        if(nodes.at(i)->inInput[j] != NULL){
-                            nodes.at(i)->inInput[j]->outCycle = tempCycle;
-                        }
-                    }
-                }
                 
                 /* Remove currently calculated operation from the operation queue */
-                for(int j = 0; j < (signed)operationQueue.size(); j++){
+                for(int j = 0; j < (unsigned)operationQueue.size(); j++){
                     if(nodes.at(i)->getOperation() == operationQueue.at(j)->getOperation()
                        && nodes.at(i)->getOpID() == operationQueue.at(j)->getOpID()){
                         operationQueue.erase(operationQueue.begin() + j);
@@ -1003,6 +1147,9 @@ void Module::getTypePropabilities(){
             case SHL:
             case SHR:
                 res_Logic.push_back(i);
+                break;
+            case IFELSE:
+                /* Do nothing */
                 break;
         }
     }
@@ -1146,6 +1293,10 @@ void Module::getForces(vector<Operation *> nodes) {
                             }
                         }
                         break;
+                    case IFELSE:
+                        /* Do Nothing */
+                        selfForce = NO_FORCE;
+                        break;
                 }
                 
                 nodes.at(j)->selfForces.push_back(selfForce);
@@ -1204,6 +1355,9 @@ double Module::getPredecessorForces(Operation *node, int latency) {
         }
         
         Operation *pred = node->inVar[i]->fromOperation;
+        if(!pred->selfForces.size()){
+            break;
+        }
         if(latency <= pred->frame.max){
             predForceSum += pred->selfForces.at(latency - 2) + getPredecessorForces(pred, latency - 1);
         }
@@ -1216,15 +1370,15 @@ double Module::getPredecessorForces(Operation *node, int latency) {
  *
  */
 void Module::scheduleNode(vector<Operation *> &scheduled ,vector<Operation *> &unscheduled){
-    double minForce;
-    if(!unscheduled.empty()){
-        minForce = unscheduled.at(0)->totalForce;
-    }
+    double minForce = 999;
+//    if(!unscheduled.empty()){
+//        minForce = unscheduled.at(0)->totalForce;
+//    }
     
     /* Find node to be scheduled */
     int index = 0;
     for(int i = 0; i < (unsigned)unscheduled.size(); i++){
-        if(minForce > unscheduled.at(i)->totalForce){
+        if(minForce > unscheduled.at(i)->totalForce && unscheduled.at(i)->getOperation() != IFELSE){
             minForce = unscheduled.at(i)->totalForce;
             index = i;
         }

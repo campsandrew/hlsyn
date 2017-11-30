@@ -45,12 +45,12 @@ private:
     bool parseLine(vector<string> line);
     int getID(Operations operation);
     vector<string> split(string const &input);
-    bool scheduleOperations();
-    bool getTimeFrames(vector<Operation *> scheduled ,vector<Operation *> unscheduled);
-    void resetUnscheduled();
-    void resetScheduled(vector<Operation *> scheduled);
-    bool getALAPTimes(vector<Operation *> nodes);
-    bool getASAPTimes(vector<Operation *> nodes);
+    bool scheduleOperations(vector<Operation *> nodes, int min, int max);
+    bool getTimeFrames(vector<Operation *> scheduled ,vector<Operation *> unscheduled, int min, int max);
+    void resetUnscheduled(vector<Operation *> unscheduled, bool ASAP);
+    void resetScheduled(vector<Operation *> scheduled, bool ALAP);
+    bool getALAPTimes(vector<Operation *> nodes, int endTime);
+    bool getASAPTimes(vector<Operation *> nodes, int startTime);
     void getTypePropabilities();
     void getTotalForces(vector<Operation *> nodes);
     void getForces(vector<Operation *> nodes);
@@ -63,6 +63,7 @@ public:
     int getLatency() { return Latency; }
     bool build_module(string file);    /* Builds the data path graph */
     bool output_module(string file);   /* Prints the module in .v format */
+    bool outputIfBlock(Operation *node);
     vector<Operation *> operations;
     vector<Output *> outputs;
     vector<Input *> inputs;

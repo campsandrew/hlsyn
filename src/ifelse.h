@@ -28,6 +28,11 @@ public:
     bool inElseBlock = false;
     vector<Operation *> ifOperations;
     vector<Operation *> elseOperations;
+    
+    int ifTimeSchedule = 0;
+    int ifEndTime = 0;
+    int elseTimeSchedule = 0;
+    int elseEndTime = 0;
 };
 
 #endif /* ifelse_h */

@@ -125,7 +125,6 @@ string Operation::toString(){
     /* Printing operations */
     switch(operation){
         case INC:
-            
             return out + " <= " + in[0] + " + 1;";
         case DEC:
             return out + " <= " + in[0] + " - 1;";
@@ -151,6 +150,16 @@ string Operation::toString(){
             return out + " <= " + in[0] + " % " + in[1] + ";";
         case MUX2x1:
             return out + " <= " + in[0] + " ? " + in[1] + " : " + in[2] + ";";
+        case IFELSE:
+            string cond = "";
+//            if(this->ifelse->inputCondition != NULL){
+//                cond += this->ifelse->inputCondition;
+//            }else{
+//                cond += this->ifelse->varCondition;
+//            }
+//
+//            string print = "if (" + cond + ")\n"
+            return cond;//print;
     }
     
     return NULL;
