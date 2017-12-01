@@ -677,6 +677,7 @@ bool Module::output_module(string file) {
     out << "\t\t\t\t\t\tstate <= Wait;" << endl;
     out << "\t\t\t\tend" << endl;
     
+    Operation *tempOp;
     for(int i = 1; i <= Latency; i++){
         out << "\t\t\t\tS" << i << ": begin" << endl;
         bool status = false;
@@ -684,15 +685,17 @@ bool Module::output_module(string file) {
             if(op->scheduledTime == i){
                 if(op->getOperation() != IFELSE){
                     out << "\t\t\t\t\t" << op->toString() << endl;
-                    status = false;
                 }else{
                     status = outputIfBlock(&out, op, 0);
+                    tempOp = op;
                 }
             }else if (op->getOperation() == IFELSE) {
                 if(op->ifelse->ifTimeSchedule == i) {
                     status = outputIfBlock(&out, op, 0);
+                    tempOp = op;
                 }else if(op->ifelse->elseTimeSchedule == i) {
                     status = outputIfBlock(&out, op, 0);
+                    tempOp = op;
                 }
             }
         }
@@ -704,6 +707,9 @@ bool Module::output_module(string file) {
                 out << "\t\t\t\t\tstate <= Final;" << endl;
             }
             out << "\t\t\t\tend" << endl;
+        }else {
+            out << "\t\t\t\tend" << endl;
+            newIfState(&out, tempOp, 0);
         }
     }
     
@@ -734,8 +740,7 @@ bool Module::outputIfBlock(ofstream *outFile, Operation *node, int num){
             if (i->getOperation() == IFELSE) {
                 outputIfBlock(outFile, i, num + 1);
             }else {
-                *outFile << "\t\t\t\t\t\tstate <= S" << num << ";" << endl;
-                return false;
+                *outFile << "\t\t\t\t\t\tstate <= IF" << num + 1 << ";" << endl;
             }
         }
         *outFile << "\t\t\t\t\tend" << endl;
@@ -750,14 +755,45 @@ bool Module::outputIfBlock(ofstream *outFile, Operation *node, int num){
             if (i->getOperation() == IFELSE) {
                 outputIfBlock(outFile, i, num + 1);
             }else {
-                *outFile << "\t\t\t\t\t\tstate <= S" << num << ";" << endl;
-                return false;
+                *outFile << "\t\t\t\t\t\tstate <= IF" << num + 1 << ";" << endl;
             }
         }
         *outFile << "\t\t\t\t\tend" << endl;
     }
     
-    return false;
+    return true;
+}
+
+void Module::newIfState(ofstream *outFile, Operation *node, int num) {
+    if (node->ifelse->ifTimeSchedule != 0) {
+        *outFile << "\t\t\t\tIF" << num << ": begin" << endl;
+    }else {
+        *outFile << "\t\t\t\tELSE" << num << ": begin" << endl;
+    }
+    
+    if (node->ifelse->ifTimeSchedule != 0) {
+        for (auto &i : node->ifelse->ifOperations) {
+            if (i->getOperation() == IFELSE) {
+                *outFile << "\t\t\t\t\t\tstate <= IF" << num + 1 << ";" << endl;
+                *outFile << "\t\t\t\tend" << endl;
+                newIfState(outFile, i, num + 1);
+            }else {
+                *outFile << i->toString() << ";" << endl;
+            }
+        }
+    }else if (node->ifelse->elseTimeSchedule != 0) {
+        for (auto &i : node->ifelse->elseOperations) {
+            if (i->getOperation() == IFELSE) {
+                *outFile << "\t\t\t\t\t\tstate <= ELSE" << num + 1 << ";" << endl;
+                *outFile << "\t\t\t\tend" << endl;
+                newIfState(outFile, i, num + 1);
+            }else {
+                *outFile << i->toString() << ";" << endl;
+            }
+        }
+    }
+    
+    
 }
 
 /**
