@@ -357,7 +357,7 @@ bool Module::parseLine(vector<string> line) {
                     }
                     
                     variables.at(i)->fromOperation = newOp;
-                    if(!newOp->inIfElse){
+                    if(newOp->inIfElse){
                         variables.at(i)->fromIfOp = openBlocks.back();
                     }
                     assigned = true;
