@@ -8,7 +8,6 @@ g = a < b
 zrin = a + c
 if ( g ) {
 	zrin = a + b
-    test = a * b
 }
 f = a * c
 x = f - d  
