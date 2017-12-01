@@ -32,6 +32,7 @@ public:
     bool isUnsigned() { return usigned; }
     string toString();
     Operation *fromOperation;
+    Operation *fromIfOp;
     vector<Operation *> toOperations;
     int outCycle = 0;
     int permOutCycle = 0;

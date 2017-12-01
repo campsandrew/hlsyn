@@ -89,6 +89,7 @@ public:
     bool inIfElse = false;              /**< If this operation is in an ifelse block */
     vector<Variable *> incomingVars;    /**< Variables that the if statement relies on */
     vector<Variable *> outgoingVars;   /**< Variables that are dependent on the if statement */
+    Operation *parent;
 };
 
 #endif /* operation_h */
