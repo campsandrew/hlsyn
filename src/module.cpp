@@ -235,7 +235,7 @@ bool Module::parseLine(vector<string> line) {
             cout << "ERROR: Invalid if statement syntax" << endl;
             return false;
         }
-
+        
         /* For nested if statements */
         if(!this->openBlocks.size()){
             /* Add all variables the if statement is dependent on */
@@ -675,8 +675,15 @@ bool Module::output_module(string file) {
             if(op->scheduledTime == i){
                 if(op->getOperation() != IFELSE){
                     out << "\t\t\t\t\t" << op->toString() << endl;
+                    status = false;
                 }else{
-                    status = outputIfBlock(op);
+                    status = outputIfBlock(&out, op, 0);
+                }
+            }else if (op->getOperation() == IFELSE) {
+                if(op->ifelse->ifTimeSchedule == i) {
+                    status = outputIfBlock(&out, op, 0);
+                }else if(op->ifelse->elseTimeSchedule == i) {
+                    status = outputIfBlock(&out, op, 0);
                 }
             }
         }
@@ -705,10 +712,43 @@ bool Module::output_module(string file) {
     return true;
 }
 
-bool Module::outputIfBlock(Operation *node){
+bool Module::outputIfBlock(ofstream *outFile, Operation *node, int num){
+    /* Distinguish if current operation is an if operation or else operation*/
+    /* TODO: Check operations after if statement for dependency */
+    if (node->ifelse->ifTimeSchedule != 0) {
+        if (node->ifelse->varCondition != NULL) {
+            *outFile << "\t\t\t\t\tif (" << node->ifelse->varCondition->getName() << ") begin" << endl;
+        }else {
+            *outFile << "\t\t\t\t\t\tif (" << node->ifelse->inputCondition->getName() << ") begin" << endl;
+        }
+        for (auto &i : node->ifelse->ifOperations) {
+            if (i->getOperation() == IFELSE) {
+                outputIfBlock(outFile, i, num + 1);
+            }else {
+                *outFile << "\t\t\t\t\t\tstate <= S" << num << ";" << endl;
+                return false;
+            }
+        }
+        *outFile << "\t\t\t\t\tend" << endl;
+    }
+    else{
+        if (node->ifelse->varCondition != NULL) {
+            *outFile << "\t\t\t\t\t\tif (" << node->ifelse->varCondition->getName() << ") begin" << endl;
+        }else {
+            *outFile << "\t\t\t\t\t\tif (" << node->ifelse->inputCondition->getName() << ") begin" << endl;
+        }
+        for (auto &i : node->ifelse->ifOperations) {
+            if (i->getOperation() == IFELSE) {
+                outputIfBlock(outFile, i, num + 1);
+            }else {
+                *outFile << "\t\t\t\t\t\tstate <= S" << num << ";" << endl;
+                return false;
+            }
+        }
+        *outFile << "\t\t\t\t\tend" << endl;
+    }
     
-    
-    return true;
+    return false;
 }
 
 /**
