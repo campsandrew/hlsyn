@@ -88,7 +88,8 @@ public:
     IfElse *ifelse;                     /**< If this is an ifelse operation */
     bool inIfElse = false;              /**< If this operation is in an ifelse block */
     vector<Variable *> incomingVars;    /**< Variables that the if statement relies on */
-    vector<Variable *> outgoingVars;   /**< Variables that are dependent on the if statement */
+    vector<Variable *> outgoingVars;    /**< Variables that are dependent on the if statement */
+    vector<Operation *> outgoingOps;    /**< Variable for ALAP scheduling */
     Operation *parent;
 };
 

@@ -394,6 +394,9 @@ bool Module::parseLine(vector<string> line) {
             for(int i = 0; i < (signed)this->variables.size(); i++){
                 if(var.compare(variables.at(i)->getName()) == 0){
                     newOp->inVar[0] = variables.at(i);
+                    if(variables.at(i)->fromIfOp != NULL){
+                        variables.at(i)->fromIfOp->outgoingOps.push_back(newOp);
+                    }
                     variables.at(i)->toOperations.push_back(newOp);
                     assigned = true;
                     break;
@@ -520,6 +523,9 @@ bool Module::parseLine(vector<string> line) {
             for(int i = 0; i < (signed)this->variables.size(); i++){
                 if(var.compare(variables.at(i)->getName()) == 0){
                     newOp->inVar[1] = variables.at(i);
+                    if(variables.at(i)->fromIfOp != NULL){
+                        variables.at(i)->fromIfOp->outgoingOps.push_back(newOp);
+                    }
                     variables.at(i)->toOperations.push_back(newOp);
                     assigned = true;
                     break;
@@ -553,6 +559,9 @@ bool Module::parseLine(vector<string> line) {
                 for(int i = 0; i < (signed)this->variables.size(); i++){
                     if(var.compare(variables.at(i)->getName()) == 0){
                         newOp->inVar[2] = variables.at(i);
+                        if(variables.at(i)->fromIfOp != NULL){
+                            variables.at(i)->fromIfOp->outgoingOps.push_back(newOp);
+                        }
                         variables.at(i)->toOperations.push_back(newOp);
                         assigned = true;
                         break;
@@ -822,7 +831,17 @@ bool Module::scheduleOperations(vector<Operation *> nodes, int min, int max) {
             getTotalForces(unscheduled);
             scheduleNode(scheduled, unscheduled); // Removes scheduled node
         }else{
-            scheduleOperations(unscheduled.front()->ifelse->ifOperations, unscheduled.front()->frame.min - 1, unscheduled.front()->frame.max);
+            if(!getTimeFrames(scheduled, unscheduled, min, max)){
+                return false;
+            }
+            int max = 0;
+            for(auto &i : unscheduled.front()->outgoingOps){
+                if(max < i->scheduledTime){
+                    max = i->scheduledTime;
+                }
+            }
+            
+            scheduleOperations(unscheduled.front()->ifelse->ifOperations, unscheduled.front()->frame.min - 1, max - 1);
             //TODO: Schedule else operations
             int time = 0;
             for(auto &i : unscheduled.front()->incomingVars){
@@ -941,7 +960,28 @@ void Module::resetScheduled(vector<Operation *> scheduled, bool ALAP){
                     scheduled.at(i)->inVar[j]->outCycle = scheduled.at(i)->scheduledTime;
                     scheduled.at(i)->inVar[j]->permOutCycle = scheduled.at(i)->scheduledTime;
                 }else{
-                    scheduled.at(i)->inVar[j]->outCycle = scheduled.at(i)->inVar[j]->permOutCycle;
+                    if(scheduled.at(i)->inVar[j]->fromIfOp != NULL && ALAP){
+                        /* Gets the outter most if in case of nesting */
+                        int min = 999;
+                        Operation *ifOp = scheduled.at(i)->inVar[j]->fromIfOp;
+                        for(auto &k : ifOp->outgoingOps){
+                            for(int l = 0; l < NUM_INPUTS; l++){
+                                if(k->inVar[l] != NULL && k->inVar[l]->getName().compare(scheduled.at(i)->inVar[j]->getName()) == 0){
+                                    if(scheduled.at(i)->scheduledTime < min){
+                                        min = scheduled.at(i)->scheduledTime;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if(min == 999){
+                            scheduled.at(i)->inVar[j]->outCycle = scheduled.at(i)->inVar[j]->permOutCycle;
+                        }else{
+                            scheduled.at(i)->inVar[j]->outCycle = min;
+                        }
+                    }else{
+                        scheduled.at(i)->inVar[j]->outCycle = scheduled.at(i)->inVar[j]->permOutCycle;
+                    }
                 }
                 scheduled.at(i)->inVar[j]->isScheduled = true;
             }else{
@@ -983,8 +1023,23 @@ bool Module::getASAPTimes(vector<Operation *> nodes, int startTime) {
                             inCyclesCalculated = false;
                             break;
                         }else{
-                            if(maxInCycle < nodes.at(i)->inVar[j]->outCycle){
-                                maxInCycle = nodes.at(i)->inVar[j]->outCycle;
+                            /* Checks if var is coming from an if statement */
+                            if(nodes.at(i)->inVar[j]->fromIfOp == NULL){
+                                if(maxInCycle < nodes.at(i)->inVar[j]->outCycle){
+                                    maxInCycle = nodes.at(i)->inVar[j]->outCycle;
+                                }
+                            }else{
+                                /* Gets where the if statement will end since node is dependent */
+                                Operation *ifOp = nodes.at(i)->inVar[j]->fromIfOp;
+                                for(auto &k : ifOp->outgoingVars){
+                                    if(maxInCycle < k->outCycle){
+                                        maxInCycle = k->outCycle;
+                                    }
+                                    if(nodes.at(i)->parent == k->fromOperation->parent){
+                                        maxInCycle = k->outCycle;
+                                        break;
+                                    }
+                                }
                             }
                         }
                     }else{
@@ -1091,13 +1146,13 @@ bool Module::getALAPTimes(vector<Operation *> nodes, int endTime) {
             }else{
                 for(auto &var : nodes.at(i)->outgoingVars){
                     for(auto &op : var->toOperations){
-                        if((!op->isUpdated || var->outCycle == -1) && op->getOperation() != IFELSE){
+                        if((!op->isUpdated || var->outCycle == -1) && op->getOperation() != IFELSE && !op->inIfElse){
                             inCyclesCalculated = false;
                             break;
                         }
                     }
                     
-                    if(inCyclesCalculated && maxInCycle > var->outCycle){
+                    if(inCyclesCalculated && maxInCycle > var->outCycle && var->outCycle > 0){
                         maxInCycle = var->outCycle;
                     }
                 }
