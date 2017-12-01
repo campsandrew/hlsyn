@@ -30,7 +30,7 @@ public:
     int getWidth() { return dataWidth; }
     bool isUnsigned() { return usigned; }
     string toString();
-    Operation *fromOperation;
+    Operation *fromOperation = NULL;
     int outCycle = 0;
     bool isScheduled = false;
 };

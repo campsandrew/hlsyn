@@ -322,6 +322,28 @@ bool Module::parseLine(vector<string> line) {
         if(openBlocks.size() != 0){
             newOp->inIfElse = true;
             newOp->parent = openBlocks.front();
+            if(newOp->parent->ifelse->inElseBlock){
+                for(int i = 0; i < (unsigned)newOp->parent->ifelse->elseOperations.size(); i++){
+                    if(newOp->parent->ifelse->elseOperations.at(i)->getOperation() == IFELSE){
+                        newOp->toIfOp = newOp->parent->ifelse->elseOperations.at(i);
+                        newOp->parent->ifelse->elseOperations.at(i)->afterIf.push_back(newOp);
+                    }
+                }
+            }else{
+                for(int i = 0; i < (unsigned)newOp->parent->ifelse->ifOperations.size(); i++){
+                    if(newOp->parent->ifelse->ifOperations.at(i)->getOperation() == IFELSE){
+                        newOp->toIfOp = newOp->parent->ifelse->ifOperations.at(i);
+                        newOp->parent->ifelse->ifOperations.at(i)->afterIf.push_back(newOp);
+                    }
+                }
+            }
+        }else{
+            for(int i = 0; i < (unsigned)operations.size(); i++){
+                if(operations.at(i)->getOperation() == IFELSE){
+                    newOp->toIfOp = operations.at(i);
+                    operations.at(i)->afterIf.push_back(newOp);
+                }
+            }
         }
         
         /* Checks to see if the first variable is an output type */
@@ -397,6 +419,16 @@ bool Module::parseLine(vector<string> line) {
                     if(variables.at(i)->fromIfOp != NULL){
                         variables.at(i)->fromIfOp->outgoingOps.push_back(newOp);
                     }
+                    
+//                    bool in = false;
+//                    if(openBlocks.size() != 0){
+//                        for(auto &j : variables.at(i)->toOperations){
+//                            if(j == openBlocks.front()){
+//                                in = true;
+//                                break;
+//                            }
+//                        }
+//                    }
                     variables.at(i)->toOperations.push_back(newOp);
                     assigned = true;
                     break;
@@ -526,6 +558,15 @@ bool Module::parseLine(vector<string> line) {
                     if(variables.at(i)->fromIfOp != NULL){
                         variables.at(i)->fromIfOp->outgoingOps.push_back(newOp);
                     }
+//                    bool in = false;
+//                    if(openBlocks.size() != 0){
+//                        for(auto &j : variables.at(i)->toOperations){
+//                            if(j == openBlocks.front()){
+//                                in = true;
+//                                break;
+//                            }
+//                        }
+//                    }
                     variables.at(i)->toOperations.push_back(newOp);
                     assigned = true;
                     break;
@@ -562,6 +603,15 @@ bool Module::parseLine(vector<string> line) {
                         if(variables.at(i)->fromIfOp != NULL){
                             variables.at(i)->fromIfOp->outgoingOps.push_back(newOp);
                         }
+//                        bool in = false;
+//                        if(openBlocks.size() != 0){
+//                            for(auto &j : variables.at(i)->toOperations){
+//                                if(j == openBlocks.front()){
+//                                    in = true;
+//                                    break;
+//                                }
+//                            }
+//                        }
                         variables.at(i)->toOperations.push_back(newOp);
                         assigned = true;
                         break;
@@ -1020,6 +1070,7 @@ void Module::resetUnscheduled(vector<Operation *> unscheduled, bool ASAP){
         if(ASAP){
             i->frame.min = 0;
             if(i->getOperation() == IFELSE){
+                i->endFrame = -1;
                 for(auto &j : i->ifelse->ifOperations){
                     j->frame.min = 0;
                 }
@@ -1125,11 +1176,19 @@ bool Module::getASAPTimes(vector<Operation *> nodes, int startTime) {
         bool opRemoved = false;
         for (int i = 0; i < (unsigned)nodes.size(); i++) {
             bool inCyclesCalculated = true;
-            double tempCycle = 0;
-            double maxInCycle = startTime;
+            int tempCycle = 0;
+            int maxInCycle = startTime;
             
             /* Get the current maximum delay from operation inputs */
             if(nodes.at(i)->getOperation() != IFELSE){
+                if(nodes.at(i)->toIfOp != NULL){
+                    if(nodes.at(i)->toIfOp->endFrame != -1){
+                        maxInCycle = nodes.at(i)->toIfOp->endFrame;
+                    }else{
+                        inCyclesCalculated = false;
+                        break;
+                    }
+                }
                 for(int j = 0; j < NUM_INPUTS; j++){
                     if(nodes.at(i)->inVar[j] != NULL){
                         if(nodes.at(i)->inVar[j]->outCycle == -1){
@@ -1156,7 +1215,18 @@ bool Module::getASAPTimes(vector<Operation *> nodes, int startTime) {
                             }
                         }
                     }else{
-                        continue;
+                        if(nodes.at(i)->toIfOp != NULL){
+                            if(nodes.at(i)->toIfOp->endFrame != -1){
+                                if(maxInCycle < nodes.at(i)->toIfOp->endFrame){
+                                    maxInCycle = nodes.at(i)->toIfOp->endFrame;
+                                }
+                            }else{
+                                inCyclesCalculated = false;
+                                break;
+                            }
+                        }else{
+                           continue;
+                        }
                     }
                 }
             }else{
@@ -1177,6 +1247,10 @@ bool Module::getASAPTimes(vector<Operation *> nodes, int startTime) {
                 
                 /* Pass delay of operation output */
                 nodes.at(i)->frame.min = maxInCycle + 1;
+                if(nodes.at(i)->frame.min > Latency){
+                    cout << "ERROR: Not enough cycles to schedule graph" << endl;
+                    return false;
+                }
                 if(nodes.at(i)->getOperation() != IFELSE){
                     tempCycle = maxInCycle + nodes.at(i)->getCycleDelay();
                     if(nodes.at(i)->varNext != NULL){
@@ -1188,6 +1262,13 @@ bool Module::getASAPTimes(vector<Operation *> nodes, int startTime) {
                     if(!getASAPTimes(nodes.at(i)->ifelse->ifOperations, nodes.at(i)->frame.min - 1)){
                         return false;
                     }
+                    int max = 0;
+                    for(auto &j : nodes.at(i)->ifelse->ifOperations){
+                        if(max < (j->frame.min + j->getCycleDelay()) - 1){
+                            max = (j->frame.min + j->getCycleDelay()) - 1;
+                        }
+                    }
+                    nodes.at(i)->endFrame = max;
                     //TODO: Recursive call for else block
                 }
                 
@@ -1224,6 +1305,9 @@ bool Module::getALAPTimes(vector<Operation *> nodes, int endTime) {
             if(i->varNext != NULL){
                 i->isUpdated = false;
             }
+            if(i->inIfElse){
+                i->isUpdated = false;
+            }
         }else{
             i->isUpdated = false;
         }
@@ -1255,6 +1339,16 @@ bool Module::getALAPTimes(vector<Operation *> nodes, int endTime) {
                     if(inCyclesCalculated){
                         maxInCycle = nodes.at(i)->varNext->outCycle;
                     }
+                }else{
+                    if(nodes.at(i)->inIfElse){
+                        for(auto &j : nodes.at(i)->parent->afterIf){
+                            if(j->isUpdated){
+                                if(maxInCycle > j->frame.max){
+                                    maxInCycle = j->frame.max;
+                                }
+                            }
+                        }
+                    }
                 }
             }else{
                 for(auto &var : nodes.at(i)->outgoingVars){
@@ -1267,6 +1361,16 @@ bool Module::getALAPTimes(vector<Operation *> nodes, int endTime) {
                     
                     if(inCyclesCalculated && maxInCycle > var->outCycle && var->outCycle > 0){
                         maxInCycle = var->outCycle;
+                    }
+                }
+                for(auto &op : nodes.at(i)->afterIf){
+                    if(!op->isUpdated){
+                        inCyclesCalculated = false;
+                        break;
+                    }else{
+                        if(inCyclesCalculated && maxInCycle > op->frame.max){
+                            maxInCycle = op->frame.max - 1;
+                        }
                     }
                 }
             }

@@ -23,8 +23,8 @@ class Input;
 class IfElse {
 private:
 public:
-    Variable *varCondition;
-    Input *inputCondition;
+    Variable *varCondition = NULL;
+    Input *inputCondition = NULL;
     bool inElseBlock = false;
     vector<Operation *> ifOperations;
     vector<Operation *> elseOperations;
