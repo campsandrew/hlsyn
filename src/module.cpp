@@ -192,7 +192,7 @@ bool Module::parseLine(vector<string> line) {
         newOp->ifelse = newIfElse;
         
         /* Gets parents if statement */
-        if(!openBlocks.size()){
+        if(openBlocks.size() != 0){
             newOp->inIfElse = true;
             newOp->parent = openBlocks.front();
         }
@@ -319,7 +319,7 @@ bool Module::parseLine(vector<string> line) {
         
         /* Gets parents if statement */
         Operation *newOp = new Operation();
-        if(!openBlocks.size()){
+        if(openBlocks.size() != 0){
             newOp->inIfElse = true;
             newOp->parent = openBlocks.front();
         }
