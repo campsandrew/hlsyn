@@ -677,40 +677,55 @@ bool Module::output_module(string file) {
     out << "\t\t\t\t\t\tstate <= Wait;" << endl;
     out << "\t\t\t\tend" << endl;
     
-    Operation *tempOp;
+    int ifCount = 1;
+    int elseCount = 1;
     for(int i = 1; i <= Latency; i++){
+        int ifOpIndex = -1;
         out << "\t\t\t\tS" << i << ": begin" << endl;
-        bool status = false;
-        for(auto &op : operations){
-            if(op->scheduledTime == i){
-                if(op->getOperation() != IFELSE){
-                    out << "\t\t\t\t\t" << op->toString() << endl;
+        for(int j = 0; j < (unsigned)operations.size(); j++){
+            if(operations.at(j)->scheduledTime == i){
+                if(operations.at(j)->getOperation() != IFELSE){
+                    out << "\t\t\t\t\t" << operations.at(j)->toString() << endl;
                 }else{
-                    status = outputIfBlock(&out, op, 0);
-                    tempOp = op;
-                }
-            }else if (op->getOperation() == IFELSE) {
-                if(op->ifelse->ifTimeSchedule == i) {
-                    status = outputIfBlock(&out, op, 0);
-                    tempOp = op;
-                }else if(op->ifelse->elseTimeSchedule == i) {
-                    status = outputIfBlock(&out, op, 0);
-                    tempOp = op;
+                    ifOpIndex = j;
                 }
             }
         }
         
-        if(!status){
+        if(ifOpIndex != -1){
+            string cond = "";
+            if(operations.at(ifOpIndex)->ifelse->inputCondition != NULL){
+                cond += operations.at(ifOpIndex)->ifelse->inputCondition->getName();
+            }else{
+                cond += operations.at(ifOpIndex)->ifelse->varCondition->getName();
+            }
+            
+            out << "\t\t\t\t\tif(" + cond + ")" << endl;
+            out << "\t\t\t\t\t\tstate <= if_S1;" << endl;
+            out << "\t\t\t\t\telse" << endl;
+            
+            if(operations.at(ifOpIndex)->ifelse->elseOperations.size() != 0){
+                out << "\t\t\t\t\t\tstate <= else_S1;" << endl;
+            }else{
+                if(operations.at(ifOpIndex)->ifelse->ifEndTime >= Latency){
+                    out << "\t\t\t\t\t\tstate <= Final;" << endl;
+                }else{
+                    out << "\t\t\t\t\t\tstate <= S" << i + 1 << ";" << endl;
+                }
+            }
+        }else{
             if(i != Latency){
                 out << "\t\t\t\t\tstate <= S" << i + 1 << ";" << endl;
             }else{
                 out << "\t\t\t\t\tstate <= Final;" << endl;
             }
-            out << "\t\t\t\tend" << endl;
-        }else {
-            out << "\t\t\t\tend" << endl;
-            newIfState(&out, tempOp, 0);
         }
+        out << "\t\t\t\tend" << endl;
+
+        /* Print if states */
+        outputIfBlock(out, ifOpIndex, true, Latency, ifCount, elseCount);
+        outputElseBlock(out, ifOpIndex, true, Latency, ifCount, elseCount);
+        
     }
     
     out << "\t\t\t\tFinal: begin" << endl;
@@ -727,73 +742,128 @@ bool Module::output_module(string file) {
     return true;
 }
 
-bool Module::outputIfBlock(ofstream *outFile, Operation *node, int num){
-    /* Distinguish if current operation is an if operation or else operation*/
-    /* TODO: Check operations after if statement for dependency */
-    if (node->ifelse->ifTimeSchedule != 0) {
-        if (node->ifelse->varCondition != NULL) {
-            *outFile << "\t\t\t\t\tif (" << node->ifelse->varCondition->getName() << ") begin" << endl;
-        }else {
-            *outFile << "\t\t\t\t\t\tif (" << node->ifelse->inputCondition->getName() << ") begin" << endl;
-        }
-        for (auto &i : node->ifelse->ifOperations) {
-            if (i->getOperation() == IFELSE) {
-                outputIfBlock(outFile, i, num + 1);
-            }else {
-                *outFile << "\t\t\t\t\t\tstate <= IF" << num + 1 << ";" << endl;
-            }
-        }
-        *outFile << "\t\t\t\t\tend" << endl;
-    }
-    else{
-        if (node->ifelse->varCondition != NULL) {
-            *outFile << "\t\t\t\t\t\tif (" << node->ifelse->varCondition->getName() << ") begin" << endl;
-        }else {
-            *outFile << "\t\t\t\t\t\tif (" << node->ifelse->inputCondition->getName() << ") begin" << endl;
-        }
-        for (auto &i : node->ifelse->ifOperations) {
-            if (i->getOperation() == IFELSE) {
-                outputIfBlock(outFile, i, num + 1);
-            }else {
-                *outFile << "\t\t\t\t\t\tstate <= IF" << num + 1 << ";" << endl;
-            }
-        }
-        *outFile << "\t\t\t\t\tend" << endl;
+void Module::outputIfBlock(ofstream &outF, int index, bool first, int prevEnd, int &ifCount, int &elseCount){
+    if(index == -1){
+        return;
     }
     
-    return true;
+    Operation *ifOp = operations.at(index);
+    for(int i = ifOp->frame.min; i <= ifOp->ifelse->ifEndTime; i++){
+        int ifOpIndex = -1;
+        outF << "\t\t\t\tif_S" << ifCount << ": begin" << endl;
+        for(int j = 0; j < (unsigned)ifOp->ifelse->ifOperations.size(); j++){
+            if(ifOp->ifelse->ifOperations.at(j)->scheduledTime == i){
+                if(ifOp->ifelse->ifOperations.at(j)->getOperation() != IFELSE){
+                    outF << "\t\t\t\t\t" << ifOp->ifelse->ifOperations.at(j)->toString() << endl;
+                }else{
+                    ifOpIndex = j;
+                }
+            }
+        }
+        
+        int ifPrevEnd = 0;
+        int elsePrevEnd = 0;
+        if(ifOpIndex != -1){
+            string cond = "";
+            if(ifOp->ifelse->ifOperations.at(ifOpIndex)->ifelse->inputCondition != NULL){
+                cond += ifOp->ifelse->ifOperations.at(ifOpIndex)->ifelse->inputCondition->getName();
+            }else{
+                cond += ifOp->ifelse->ifOperations.at(ifOpIndex)->ifelse->varCondition->getName();
+            }
+            
+            outF << "\t\t\t\t\tif(" + cond + ")" << endl;
+            outF << "\t\t\t\t\t\tstate <= if_S" << ifCount + 1 << ";" << endl;
+            outF << "\t\t\t\t\telse" << endl;
+            
+            ifPrevEnd = ifOp->ifelse->ifOperations.at(ifOpIndex)->ifelse->ifEndTime;
+            if(ifOp->ifelse->ifOperations.at(ifOpIndex)->ifelse->elseOperations.size() != 0){
+                outF << "\t\t\t\t\t\tstate <= else_S" << elseCount << ";" << endl;
+                elsePrevEnd = ifOp->ifelse->ifOperations.at(ifOpIndex)->ifelse->elseEndTime;
+            }else{
+                outF << "\t\t\t\t\t\tstate <= S" << ifCount + 1 << ";" << endl;
+            }
+        }else{
+            if(i != ifOp->ifelse->ifEndTime){
+                outF << "\t\t\t\t\tstate <= if_S" << ifCount + 1 << ";" << endl;
+            }else{
+                if(ifOp->ifelse->ifEndTime >= prevEnd && first){
+                    outF << "\t\t\t\t\t\tstate <= Final;" << endl;
+                }else if(first){
+                    outF << "\t\t\t\t\tstate <= S" << ifOp->ifelse->ifEndTime + 1 << ";" << endl;
+                }else{
+                    outF << "\t\t\t\t\t\tstate <= if_S" << ifOp->ifelse->ifEndTime + 1 << ";" << endl;
+                }
+            }
+        }
+        outF << "\t\t\t\tend" << endl;
+        ifCount++;
+        
+        /* Print if states */
+        outputIfBlock(outF, ifOpIndex, false, ifPrevEnd, ifCount, elseCount);
+        outputElseBlock(outF, ifOpIndex, false, elsePrevEnd, ifCount, elseCount);
+    }
 }
 
-void Module::newIfState(ofstream *outFile, Operation *node, int num) {
-    if (node->ifelse->ifTimeSchedule != 0) {
-        *outFile << "\t\t\t\tIF" << num << ": begin" << endl;
-    }else {
-        *outFile << "\t\t\t\tELSE" << num << ": begin" << endl;
+void Module::outputElseBlock(ofstream &outF, int index, bool first, int prevEnd, int &ifCount, int &elseCount){
+    if(index == -1){
+        return;
     }
     
-    if (node->ifelse->ifTimeSchedule != 0) {
-        for (auto &i : node->ifelse->ifOperations) {
-            if (i->getOperation() == IFELSE) {
-                *outFile << "\t\t\t\t\t\tstate <= IF" << num + 1 << ";" << endl;
-                *outFile << "\t\t\t\tend" << endl;
-                newIfState(outFile, i, num + 1);
-            }else {
-                *outFile << i->toString() << ";" << endl;
+    Operation *ifOp = operations.at(index);
+    for(int i = ifOp->frame.min; i <= ifOp->ifelse->elseEndTime; i++){
+        int ifOpIndex = -1;
+        outF << "\t\t\t\telse_S" << elseCount << ": begin" << endl;
+        for(int j = 0; j < (unsigned)ifOp->ifelse->elseOperations.size(); j++){
+            if(ifOp->ifelse->elseOperations.at(j)->scheduledTime == i){
+                if(ifOp->ifelse->elseOperations.at(j)->getOperation() != IFELSE){
+                    outF << "\t\t\t\t\t" << ifOp->ifelse->elseOperations.at(j)->toString() << endl;
+                }else{
+                    ifOpIndex = j;
+                }
             }
         }
-    }else if (node->ifelse->elseTimeSchedule != 0) {
-        for (auto &i : node->ifelse->elseOperations) {
-            if (i->getOperation() == IFELSE) {
-                *outFile << "\t\t\t\t\t\tstate <= ELSE" << num + 1 << ";" << endl;
-                *outFile << "\t\t\t\tend" << endl;
-                newIfState(outFile, i, num + 1);
-            }else {
-                *outFile << i->toString() << ";" << endl;
+        
+        int ifPrevEnd = 0;
+        int elsePrevEnd = 0;
+        if(ifOpIndex != -1){
+            string cond = "";
+            if(ifOp->ifelse->ifOperations.at(ifOpIndex)->ifelse->inputCondition != NULL){
+                cond += ifOp->ifelse->ifOperations.at(ifOpIndex)->ifelse->inputCondition->getName();
+            }else{
+                cond += ifOp->ifelse->ifOperations.at(ifOpIndex)->ifelse->varCondition->getName();
+            }
+            
+            outF << "\t\t\t\t\tif(" + cond + ")" << endl;
+            outF << "\t\t\t\t\t\tstate <= if_S" << ifCount + 1 << ";" << endl;
+            outF << "\t\t\t\t\telse" << endl;
+            
+            ifPrevEnd = ifOp->ifelse->ifOperations.at(ifOpIndex)->ifelse->ifEndTime;
+            if(ifOp->ifelse->ifOperations.at(ifOpIndex)->ifelse->elseOperations.size() != 0){
+                outF << "\t\t\t\t\t\tstate <= else_S" << elseCount << ";" << endl;
+                elsePrevEnd = ifOp->ifelse->ifOperations.at(ifOpIndex)->ifelse->elseEndTime;
+            }else{
+                outF << "\t\t\t\t\t\tstate <= S" << ifCount + 1 << ";" << endl;
+            }
+        }else{
+            if(i != ifOp->ifelse->ifEndTime){
+                outF << "\t\t\t\t\tstate <= else_S" << elseCount + 1 << ";" << endl;
+            }else{
+                if(ifOp->ifelse->ifEndTime >= prevEnd && first){
+                    outF << "\t\t\t\t\tstate <= Final;" << endl;
+                }else if(first){
+                    outF << "\t\t\t\t\tstate <= S" << ifOp->ifelse->ifEndTime + 1 << ";" << endl;
+                }else{
+                    outF << "\t\t\t\t\tstate <= if_S" << ifOp->ifelse->ifEndTime + 1 << ";" << endl;
+                }
             }
         }
+        outF << "\t\t\t\tend" << endl;
+        elseCount++;
+        
+        /* Print if states */
+        outputIfBlock(outF, ifOpIndex, false, ifPrevEnd, ifCount, elseCount);
+        outputElseBlock(outF, ifOpIndex, false, elsePrevEnd, ifCount, elseCount);
     }
-    
-    
 }
 
 /**
@@ -878,6 +948,13 @@ bool Module::scheduleOperations(vector<Operation *> nodes, int min, int max) {
             }
             
             scheduleOperations(unscheduled.front()->ifelse->ifOperations, unscheduled.front()->frame.min - 1, max - 1);
+            max = 0;
+            for(auto &i : unscheduled.front()->ifelse->ifOperations){
+                if(max < (i->scheduledTime + i->getCycleDelay()) - 1){
+                    max = (i->scheduledTime + i->getCycleDelay()) - 1;
+                }
+            }
+            unscheduled.front()->ifelse->ifEndTime = max;
             //TODO: Schedule else operations
             int time = 0;
             for(auto &i : unscheduled.front()->incomingVars){
@@ -886,7 +963,7 @@ bool Module::scheduleOperations(vector<Operation *> nodes, int min, int max) {
                     time = temp;
                 }
             }
-            unscheduled.front()->ifelse->ifTimeSchedule = time - 1;
+            unscheduled.front()->scheduledTime = time - 1;
             scheduled.push_back(unscheduled.front());
             unscheduled.erase(unscheduled.begin());
         }
