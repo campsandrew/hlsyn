@@ -63,7 +63,7 @@ public:
     int getLatency() { return Latency; }
     bool build_module(string file);    /* Builds the data path graph */
     bool output_module(string file);   /* Prints the module in .v format */
-    bool outputIfBlock(ofstream *outFile, Operation *node);
+    bool outputIfBlock(ofstream *outFile, Operation *node, int num);
     vector<Operation *> operations;
     vector<Output *> outputs;
     vector<Input *> inputs;

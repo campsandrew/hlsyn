@@ -675,12 +675,15 @@ bool Module::output_module(string file) {
             if(op->scheduledTime == i){
                 if(op->getOperation() != IFELSE){
                     out << "\t\t\t\t\t" << op->toString() << endl;
+                    status = false;
                 }else{
-                    status = outputIfBlock(&out, op);
+                    status = outputIfBlock(&out, op, 0);
                 }
             }else if (op->getOperation() == IFELSE) {
                 if(op->ifelse->ifTimeSchedule == i) {
-                    status = outputIfBlock(&out, op);
+                    status = outputIfBlock(&out, op, 0);
+                }else if(op->ifelse->elseTimeSchedule == i) {
+                    status = outputIfBlock(&out, op, 0);
                 }
             }
         }
@@ -709,7 +712,7 @@ bool Module::output_module(string file) {
     return true;
 }
 
-bool Module::outputIfBlock(ofstream *outFile, Operation *node){
+bool Module::outputIfBlock(ofstream *outFile, Operation *node, int num){
     /* Distinguish if current operation is an if operation or else operation*/
     /* TODO: Check operations after if statement for dependency */
     if (node->ifelse->ifTimeSchedule != 0) {
@@ -720,9 +723,9 @@ bool Module::outputIfBlock(ofstream *outFile, Operation *node){
         }
         for (auto &i : node->ifelse->ifOperations) {
             if (i->getOperation() == IFELSE) {
-                outputIfBlock(outFile, i);
+                outputIfBlock(outFile, i, num + 1);
             }else {
-                *outFile << "\t\t\t\t\t\t" << i->toString() << endl;
+                *outFile << "\t\t\t\t\t\tstate <= S" << num << ";" << endl;
                 return false;
             }
         }
@@ -736,9 +739,10 @@ bool Module::outputIfBlock(ofstream *outFile, Operation *node){
         }
         for (auto &i : node->ifelse->ifOperations) {
             if (i->getOperation() == IFELSE) {
-                outputIfBlock(outFile, i);
+                outputIfBlock(outFile, i, num + 1);
             }else {
-                *outFile << "\t\t\t\t\t\t\t" << i->toString() << endl;
+                *outFile << "\t\t\t\t\t\tstate <= S" << num << ";" << endl;
+                return false;
             }
         }
         *outFile << "\t\t\t\t\tend" << endl;
