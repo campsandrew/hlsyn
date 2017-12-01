@@ -191,6 +191,12 @@ bool Module::parseLine(vector<string> line) {
         newOp->setOperation(IFELSE);
         newOp->ifelse = newIfElse;
         
+        /* Gets parents if statement */
+        if(!openBlocks.size()){
+            newOp->inIfElse = true;
+            newOp->parent = openBlocks.front();
+        }
+        
         /* Assign condition statement to ifelse operation */
         bool assigned = false;
         string condition = line.front();
@@ -311,10 +317,16 @@ bool Module::parseLine(vector<string> line) {
         //TODO: For loop if time
     } else {
         
+        /* Gets parents if statement */
+        Operation *newOp = new Operation();
+        if(!openBlocks.size()){
+            newOp->inIfElse = true;
+            newOp->parent = openBlocks.front();
+        }
+        
         /* Checks to see if the first variable is an output type */
         bool assigned = false;
         string var = line.front();
-        Operation *newOp = new Operation();
         for(int i = 0; i < (signed)this->outputs.size(); i++){
             if(var.compare(outputs.at(i)->getName()) == 0){
                 newOp->outNext = outputs.at(i);
@@ -343,7 +355,11 @@ bool Module::parseLine(vector<string> line) {
                             }
                         }
                     }
+                    
                     variables.at(i)->fromOperation = newOp;
+                    if(!newOp->inIfElse){
+                        variables.at(i)->fromIfOp = openBlocks.back();
+                    }
                     assigned = true;
                     break;
                 }
