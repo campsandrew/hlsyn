@@ -4,7 +4,7 @@
  * NetID: ichikasuto, andrewcamps
  * Date: November 17, 2017
  *
- * Description:
+ * Description: Various functions to help create the output connects of the graph and print out the operations to the verilog file
  *
  **********************************************************************************/
 

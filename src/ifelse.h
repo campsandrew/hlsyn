@@ -4,7 +4,7 @@
  * NetID: ichikasuto, andrewcamps
  * Date: November 29, 2017
  *
- * Description:
+ * Description: This defines the if statement operation. This stores the graph inside of an ifelse statement
  *
  **********************************************************************************/
 

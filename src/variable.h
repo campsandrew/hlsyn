@@ -4,7 +4,7 @@
  * NetID: ichikasuto, andrewcamps
  * Date: November 17, 2017
  *
- * Description:
+ * Description: This defines the variable object for connecting inputs and outputs of nodes
  *
  **********************************************************************************/
 

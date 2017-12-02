@@ -4,7 +4,9 @@
  * NetID: ichikasuto, andrewcamps
  * Date: November 17, 2017
  *
- * Description:
+ * Description: This program uses a command-line argument to specify the input C-like file a latency constraint specified in cycles,
+ * and the name of the ouput Verilog file. The program is a high-level synthesizer that will convert a C-like behavioral description
+ * into a scheduled high-level state machine implemented in Verilog. The scheduling algorithm used is force directed scheduling.
  *
  **********************************************************************************/
 

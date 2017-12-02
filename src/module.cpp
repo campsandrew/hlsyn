@@ -4,7 +4,7 @@
  * NetID: ichikasuto, andrewcamps
  * Date: November 17, 2017
  *
- * Description:
+ * Description: This file creates the graph and outputs the code to the verilog file specified
  *
  **********************************************************************************/
 
@@ -70,7 +70,7 @@ bool Module::readFile(string file) {
 }
 
 /**
- *x
+ * Parses the input .c files and creates the graph structure
  */
 bool Module::parseLine(vector<string> line) {
     Type lineType;
@@ -645,7 +645,7 @@ bool Module::parseLine(vector<string> line) {
 }
 
 /**
- *
+ * This function outputs the scheduled graph structure to the .v file with Verilog syntax
  */
 bool Module::output_module(string file) {
     ofstream out;
@@ -703,12 +703,12 @@ bool Module::output_module(string file) {
     for(int i = 1; i <= Latency; i++){
         out << ", S" << i << " = " << i;
     }
-    out << " Final = " << Latency + 1 << ";" << endl << endl;
+    out << ", Final = " << Latency + 1 << ";" << endl << endl;
     
     /* Print states and operations */
     out << "\talways @(posedge Clk) begin" << endl;
     out << "\t\tif(Rst) begin" << endl;
-    out << "\t\t\tState <= Wait;" << endl;
+    out << "\t\t\tstate <= Wait;" << endl;
     for(auto &i : outputs){
         out << "\t\t\t" << i->getName() << " <= 0;" << endl;
     }
@@ -794,6 +794,9 @@ bool Module::output_module(string file) {
     return true;
 }
 
+/**
+ * Outputs the if block of an if statement to verilog file
+ */
 void Module::outputIfBlock(ofstream &outF, int index, bool first, int prevEnd, int &ifCount, int &elseCount, int &nestedIndex, int &nestedCount){
     if(index == -1){
         return;
@@ -882,6 +885,9 @@ void Module::outputIfBlock(ofstream &outF, int index, bool first, int prevEnd, i
     }
 }
 
+/**
+ * Outputs the else block of an if statement to verilog file
+ */
 void Module::outputElseBlock(ofstream &outF, int index, bool first, int prevEnd, int &ifCount, int &elseCount, int &nestedIndex, int &nestedCount){
     if(index == -1){
         return;
@@ -996,7 +1002,8 @@ bool Module::getDataType(string type, int *size){
 }
 
 /**
- *
+ * Schedules the operations using force directed scheduling algorithm. An attemp was made to implement if statments and schedule
+ * the contents of the if statements as well
  */
 bool Module::scheduleOperations(vector<Operation *> nodes, int min, int max) {
     vector<Operation *> unscheduled = nodes;
@@ -1077,7 +1084,7 @@ bool Module::scheduleOperations(vector<Operation *> nodes, int min, int max) {
 }
 
 /**
- *
+ * This gets the time frames for scheduling using force directed algorithm
  */
 bool Module::getTimeFrames(vector<Operation *> scheduled, vector<Operation *> unscheduled, int min, int max){
     
@@ -1099,7 +1106,7 @@ bool Module::getTimeFrames(vector<Operation *> scheduled, vector<Operation *> un
 }
 
 /**
- *
+ * A reset funtion for some variables
  */
 void Module::resetUnscheduled(vector<Operation *> unscheduled, bool ASAP){
     
@@ -1147,7 +1154,7 @@ void Module::resetUnscheduled(vector<Operation *> unscheduled, bool ASAP){
 }
 
 /**
- *
+ * A reset function for scheduled nodes
  */
 void Module::resetScheduled(vector<Operation *> scheduled, bool ALAP){
     
@@ -1218,7 +1225,7 @@ void Module::resetScheduled(vector<Operation *> scheduled, bool ALAP){
 }
 
 /**
- *
+ * Gets the ASAP time frames of a graph
  */
 bool Module::getASAPTimes(vector<Operation *> nodes, int startTime) {
     vector<Operation *> operationQueue = nodes;
@@ -1353,7 +1360,7 @@ bool Module::getASAPTimes(vector<Operation *> nodes, int startTime) {
 }
 
 /**
- *
+ * Gets the ALAP time frames of a graph
  */
 bool Module::getALAPTimes(vector<Operation *> nodes, int endTime) {
     vector<Operation *> operationQueue = nodes;
@@ -1522,7 +1529,7 @@ bool Module::getALAPTimes(vector<Operation *> nodes, int endTime) {
 }
 
 /**
- *
+ * Gets the type propabilities for force directed scheduling
  */
 void Module::getTypePropabilities(){
     vector<Operation *> res_AddSub;
@@ -1607,7 +1614,7 @@ void Module::getTypePropabilities(){
 }
 
 /**
- *
+ * Calculates the total forces of all the nodes at each time in their interval
  */
 void Module::getTotalForces(vector<Operation *> nodes){
     
@@ -1635,7 +1642,7 @@ void Module::getTotalForces(vector<Operation *> nodes){
 }
 
 /**
- *
+ * Helper functino to get the self forces
  */
 void Module::getForces(vector<Operation *> nodes) {
     
@@ -1728,7 +1735,7 @@ void Module::getForces(vector<Operation *> nodes) {
 }
 
 /**
- *
+ * Gets the successor forces of a node
  */
 double Module::getSuccessorForces(Operation *node, int latency) {
     
@@ -1749,7 +1756,7 @@ double Module::getSuccessorForces(Operation *node, int latency) {
 }
 
 /**
- *
+ * Gets the prdecessor forces of a node
  */
 double Module::getPredecessorForces(Operation *node, int latency) {
     
@@ -1772,7 +1779,7 @@ double Module::getPredecessorForces(Operation *node, int latency) {
 }
 
 /**
- *
+ * Schedules the node with the smallest total force
  */
 void Module::scheduleNode(vector<Operation *> &scheduled ,vector<Operation *> &unscheduled){
     double minForce = 999;
