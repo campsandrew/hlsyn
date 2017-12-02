@@ -95,7 +95,7 @@ int Operation::getCycleDelay(){
             return 3;
         case IFELSE:
             /* Do nothing */
-            break;
+            return 0;
     }
     
     return 0;
