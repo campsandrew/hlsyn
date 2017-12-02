@@ -772,11 +772,15 @@ bool Module::output_module(string file) {
         }
         out << "\t\t\t\tend" << endl;
         
-        int nested = 0, nestedCount = 0;
+        int nested = 0, nestedCount = 0, ifState = 1, elseState = 1;
         
         /* Print if states */
-        outputIfBlock(out, ifOpIndex, true, Latency, ifCount, elseCount, nested, nestedCount);
-        outputElseBlock(out, ifOpIndex, true, Latency, ifCount, elseCount, nested, nestedCount);
+        if (ifOpIndex != -1) {
+            outputIfBlock(out, ifOpIndex, true, Latency, ifCount, elseCount, nested, nestedCount, ifState);
+            if (operations.at(ifOpIndex)->ifelse->elseOperations.size() != 0) {
+                outputElseBlock(out, ifOpIndex, true, Latency, ifCount, elseCount, nested, nestedCount, elseState);
+            }
+        }
         
     }
     
@@ -794,14 +798,16 @@ bool Module::output_module(string file) {
     return true;
 }
 
-void Module::outputIfBlock(ofstream &outF, int index, bool first, int prevEnd, int &ifCount, int &elseCount, int &nestedIndex, int &nestedCount){
+void Module::outputIfBlock(ofstream &outF, int index, bool first, int prevEnd, int &ifCount, int &elseCount, int &nestedIndex, int &nestedCount, int &ifState){
     if(index == -1){
         return;
     }
+    bool finished = false;
     int orig = index;
     int origIfCount = ifCount;
     int origElseCount = elseCount;
     Operation *ifOp = new Operation();
+    
     if (ifCount < 2) {
         ifOp = operations.at(index);
     }else {
@@ -809,28 +815,40 @@ void Module::outputIfBlock(ofstream &outF, int index, bool first, int prevEnd, i
     }
     for(int i = ifOp->frame.min; i <= ifOp->ifelse->ifEndTime; i++){
         int ifOpIndex = -1, tempStateNum = 0;
-        tempStateNum = ifCount;
-        tempStateNum += nestedCount;
-        outF << "\t\t\t\tif_S" << tempStateNum << ": begin" << endl;
+        outF << "\t\t\t\tif_S" << ifState << ": begin" << endl;
         for(int j = 0; j < (unsigned)ifOp->ifelse->ifOperations.size(); j++){
             if(ifCount < 2) {
                 if((ifOp->ifelse->ifOperations.at(j)->scheduledTime - 1) == i){
                     if(ifOp->ifelse->ifOperations.at(j)->getOperation() != IFELSE){
                         outF << "\t\t\t\t\t" << ifOp->ifelse->ifOperations.at(j)->toString() << endl;
+                        ifOp->printedOps++;
                     }else{
                         ifOpIndex = j;
                         ifCount++;
                         nestedCount++;
+                        ifState++;
                     }
                 }
             }else {
                 if(ifOp->ifelse->ifOperations.at(j)->scheduledTime == i){
                     if(ifOp->ifelse->ifOperations.at(j)->getOperation() != IFELSE){
                         outF << "\t\t\t\t\t" << ifOp->ifelse->ifOperations.at(j)->toString() << endl;
+                        ifOp->printedOps++;
                     }else{
-                        ifOpIndex = j;
-                        ifCount++;
-                        nestedCount++;
+                        if(ifOp->ifelse->ifOperations.at(j)->printedOps == ifOp->ifelse->ifOperations.at(j)->ifelse->ifOperations.size()) {
+                            operations.at(index)->ifelse->ifOperations.erase(operations.at(index)->ifelse->ifOperations.begin());
+                            j--;
+                            i++;
+                        }else if (ifOp->ifelse->ifOperations.at(j)->printedOps == ifOp->ifelse->ifOperations.at(j)->ifelse->elseOperations.size()) {
+                            operations.at(index)->ifelse->elseOperations.erase(operations.at(index)->ifelse->elseOperations.begin());
+                            j--;
+                            i++;
+                        }else {
+                            ifOpIndex = j;
+                            ifCount++;
+                            nestedCount++;
+                            ifState++;
+                        }
                     }
                 }
             }
@@ -855,7 +873,7 @@ void Module::outputIfBlock(ofstream &outF, int index, bool first, int prevEnd, i
                 outF << "\t\t\t\t\t\tstate <= else_S" << elseCount << ";" << endl;
                 elsePrevEnd = ifOp->ifelse->ifOperations.at(ifOpIndex)->ifelse->elseEndTime;
             }else{
-                outF << "\t\t\t\t\t\tstate <= S" << ifCount + 1 << ";" << endl;
+                outF << "\t\t\t\t\t\tstate <= if_S" << ifCount + 1 << ";" << endl;
             }
         }else{
             if(i != ifOp->ifelse->ifEndTime){
@@ -864,25 +882,27 @@ void Module::outputIfBlock(ofstream &outF, int index, bool first, int prevEnd, i
                 if(ifOp->ifelse->ifEndTime >= prevEnd && first){
                     outF << "\t\t\t\t\t\tstate <= Final;" << endl;
                 }else if(first){
-                    outF << "\t\t\t\t\tstate <= S" << ifOp->ifelse->ifEndTime + 1 << ";" << endl;
+                    outF << "\t\t\t\t\tstate <= S" << ifOp->ifelse->ifEndTime - ifCount << ";" << endl;
+                    finished = true;
                 }else{
                     outF << "\t\t\t\t\tstate <= if_S" << ifOp->ifelse->ifEndTime - ifCount << ";" << endl;
+                    ifState++;
                 }
             }
         }
         outF << "\t\t\t\tend" << endl;
         
         /* Print if states */
-        if(ifCount > origIfCount) {
-            outputIfBlock(outF, orig, false, ifPrevEnd, ifCount, elseCount, ifOpIndex, nestedCount);
+        if(ifCount > origIfCount && !finished) {
+            outputIfBlock(outF, orig, false, ifPrevEnd, ifCount, elseCount, ifOpIndex, nestedCount, ifState);
         }
-        if(elseCount > origElseCount) {
-            outputElseBlock(outF, orig, false, elsePrevEnd, ifCount, elseCount, ifOpIndex, nestedCount);
+        if(elseCount > origElseCount && !finished) {
+            outputElseBlock(outF, orig, false, elsePrevEnd, ifCount, elseCount, ifOpIndex, nestedCount, ifState);
         }
     }
 }
 
-void Module::outputElseBlock(ofstream &outF, int index, bool first, int prevEnd, int &ifCount, int &elseCount, int &nestedIndex, int &nestedCount){
+void Module::outputElseBlock(ofstream &outF, int index, bool first, int prevEnd, int &ifCount, int &elseCount, int &nestedIndex, int &nestedCount, int &ifState){
     if(index == -1){
         return;
     }
@@ -944,8 +964,8 @@ void Module::outputElseBlock(ofstream &outF, int index, bool first, int prevEnd,
         elseCount++;
         
         /* Print if states */
-        outputIfBlock(outF, orig, false, ifPrevEnd, ifCount, elseCount, ifOpIndex, nestedCount);
-        outputElseBlock(outF, ifOpIndex, false, elsePrevEnd, ifCount, elseCount, ifOpIndex, nestedCount);
+        outputIfBlock(outF, orig, false, ifPrevEnd, ifCount, elseCount, ifOpIndex, nestedCount, ifState);
+        outputElseBlock(outF, ifOpIndex, false, elsePrevEnd, ifCount, elseCount, ifOpIndex, nestedCount, ifState);
     }
 }
 
