@@ -698,17 +698,21 @@ bool Module::output_module(string file) {
     out << endl;
     
     /* Print state info */
-    out << "\treg [" << ceil(log2(Latency + 2)) - 1 << ":0] state;" << endl;
+    int count = 0;
+    for(auto &i : operations){
+        if(i->getOperation() == IFELSE){
+            count = i->endFrame - i->scheduledTime;
+        }
+    }
+    
+    out << "\treg [" << ceil(log2(count + Latency + 2)) - 1 << ":0] state;" << endl;
     out << "\tparameter Wait = 0";
     for(int i = 1; i <= Latency; i++){
         out << ", S" << i << " = " << i;
     }
-//    int count = 0;
-//    for(auto &i : operations){
-//        if(i->getOperation() == IFELSE){
-//            //countParam(count, i);
-//        }
-//    }
+    for(int i = 1; i <= count; i++){
+        out << ", if_S" << i << " = " << i;
+    }
     out << ", Final = " << Latency + 1 << ";" << endl << endl;
     
     /* Print states and operations */
@@ -827,9 +831,9 @@ void Module::outputIfBlock(ofstream &outF, int index, bool first, int prevEnd, i
         ifOp = operations.at(index)->ifelse->ifOperations.at(nestedIndex);
     }
     for(int i = ifOp->frame.min; i <= ifOp->ifelse->ifEndTime; i++){
-        int ifOpIndex = -1, tempStateNum = 0;
+        int ifOpIndex = -1;
         outF << "\t\t\t\tif_S" << ifState << ": begin" << endl;
-        for(int j = 0; j < (unsigned)ifOp->ifelse->ifOperations.size(); j++){
+        for(int j = 0; j < (signed)ifOp->ifelse->ifOperations.size(); j++){
             if(ifCount < 2) {
                 if((ifOp->ifelse->ifOperations.at(j)->scheduledTime - 1) == i){
                     if(ifOp->ifelse->ifOperations.at(j)->getOperation() != IFELSE){
@@ -848,11 +852,11 @@ void Module::outputIfBlock(ofstream &outF, int index, bool first, int prevEnd, i
                         outF << "\t\t\t\t\t" << ifOp->ifelse->ifOperations.at(j)->toString() << endl;
                         ifOp->printedOps++;
                     }else{
-                        if(ifOp->ifelse->ifOperations.at(j)->printedOps == ifOp->ifelse->ifOperations.at(j)->ifelse->ifOperations.size()) {
+                        if(ifOp->ifelse->ifOperations.at(j)->printedOps == (signed)ifOp->ifelse->ifOperations.at(j)->ifelse->ifOperations.size()) {
                             operations.at(index)->ifelse->ifOperations.erase(operations.at(index)->ifelse->ifOperations.begin());
                             j--;
                             i++;
-                        }else if (ifOp->ifelse->ifOperations.at(j)->printedOps == ifOp->ifelse->ifOperations.at(j)->ifelse->elseOperations.size()) {
+                        }else if (ifOp->ifelse->ifOperations.at(j)->printedOps == (signed)ifOp->ifelse->ifOperations.at(j)->ifelse->elseOperations.size()) {
                             operations.at(index)->ifelse->elseOperations.erase(operations.at(index)->ifelse->elseOperations.begin());
                             j--;
                             i++;
