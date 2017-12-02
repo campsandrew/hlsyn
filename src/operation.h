@@ -93,6 +93,7 @@ public:
     vector<Variable *> incomingVars;    /**< Variables that the if statement relies on */
     vector<Variable *> outgoingVars;    /**< Variables that are dependent on the if statement */
     vector<Operation *> outgoingOps;    /**< Variable for ALAP scheduling */
+    int printedOps;
     Operation *parent = NULL;
 };
 
