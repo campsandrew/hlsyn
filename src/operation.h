@@ -93,7 +93,7 @@ public:
     vector<Variable *> incomingVars;    /**< Variables that the if statement relies on */
     vector<Variable *> outgoingVars;    /**< Variables that are dependent on the if statement */
     vector<Operation *> outgoingOps;    /**< Variable for ALAP scheduling */
-    Operation *parent;
+    Operation *parent = NULL;
 };
 
 #endif /* operation_h */

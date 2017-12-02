@@ -996,6 +996,11 @@ bool Module::scheduleOperations(vector<Operation *> nodes, int min, int max) {
                     max = i->scheduledTime;
                 }
             }
+            for(auto &i : unscheduled.front()->afterIf){
+                if(max < i->scheduledTime){
+                    max = i->scheduledTime;
+                }
+            }
             
             scheduleOperations(unscheduled.front()->ifelse->ifOperations, unscheduled.front()->frame.min - 1, max - 1);
             max = 0;
@@ -1012,8 +1017,24 @@ bool Module::scheduleOperations(vector<Operation *> nodes, int min, int max) {
                 if(temp > time){
                     time = temp;
                 }
+//                for(auto &j : operations){
+//                    if(j->varNext != NULL && j->varNext->getName().compare(i->getName())){
+//                        for(auto &k : j->varNext->toOperations){
+//                            if(k == unscheduled.front()){
+//                                if((k->scheduledTime + k->getCycleDelay()) - 1 < time && (k->scheduledTime + k->getCycleDelay()) - 1 > 0){
+//                                    time = (k->scheduledTime + k->getCycleDelay()) - 1;
+//                                }
+//                            }
+//                        }
+//                    }
+//                }
             }
-            unscheduled.front()->scheduledTime = time - 1;
+            
+            if(!unscheduled.front()->incomingVars.size()){
+                time = unscheduled.front()->frame.min;
+            }
+            
+            unscheduled.front()->scheduledTime = time;
             scheduled.push_back(unscheduled.front());
             unscheduled.erase(unscheduled.begin());
         }
@@ -1230,13 +1251,17 @@ bool Module::getASAPTimes(vector<Operation *> nodes, int startTime) {
                     }
                 }
             }else{
-                for(auto &j : nodes.at(i)->incomingVars){
-                    if(j->outCycle == -1){
-                        inCyclesCalculated = false;
-                        break;
-                    }else{
-                        if(maxInCycle < j->outCycle){
-                            maxInCycle = j->outCycle;
+                if(!nodes.at(i)->incomingVars.size()){
+                    maxInCycle++;
+                }else{
+                    for(auto &j : nodes.at(i)->incomingVars){
+                        if(j->outCycle == -1){
+                            inCyclesCalculated = false;
+                            break;
+                        }else{
+                            if(maxInCycle < j->outCycle){
+                                maxInCycle = j->outCycle;
+                            }
                         }
                     }
                 }
@@ -1304,12 +1329,15 @@ bool Module::getALAPTimes(vector<Operation *> nodes, int endTime) {
         if(i->getOperation() != IFELSE){
             if(i->varNext != NULL){
                 i->isUpdated = false;
+                i->frame.max = 0;
             }
             if(i->inIfElse){
                 i->isUpdated = false;
+                i->frame.max = 0;
             }
         }else{
             i->isUpdated = false;
+            i->frame.max = 0;
         }
     }
     
@@ -1329,15 +1357,24 @@ bool Module::getALAPTimes(vector<Operation *> nodes, int endTime) {
             
             if(nodes.at(i)->getOperation() != IFELSE){
                 if(nodes.at(i)->varNext != NULL){
-                    for(auto &op : nodes.at(i)->varNext->toOperations){
-                        if(!op->isUpdated || nodes.at(i)->varNext->outCycle == -1){
-                            inCyclesCalculated = false;
-                            break;
+                    if(!nodes.at(i)->varNext->toOperations.size() && nodes.at(i)->parent != NULL){
+                        maxInCycle = nodes.at(i)->parent->endFrame + 1;
+                    }else{
+                        for(auto &op : nodes.at(i)->varNext->toOperations){
+                            if(!op->isUpdated || nodes.at(i)->varNext->outCycle == -1){
+                                inCyclesCalculated = false;
+                                break;
+                            }
                         }
-                    }
-                    
-                    if(inCyclesCalculated){
-                        maxInCycle = nodes.at(i)->varNext->outCycle;
+                        if(inCyclesCalculated){
+                            if(nodes.at(i)->parent != NULL && nodes.at(i)->parent->parent != NULL){
+                                if(nodes.at(i)->varNext->outCycle > nodes.at(i)->parent->parent->endFrame){
+                                    maxInCycle = nodes.at(i)->parent->endFrame + 1;
+                                }
+                            }else{
+                                maxInCycle = nodes.at(i)->varNext->outCycle;
+                            }
+                        }
                     }
                 }else{
                     if(nodes.at(i)->inIfElse){
@@ -1368,7 +1405,7 @@ bool Module::getALAPTimes(vector<Operation *> nodes, int endTime) {
                         inCyclesCalculated = false;
                         break;
                     }else{
-                        if(inCyclesCalculated && maxInCycle > op->frame.max){
+                        if(inCyclesCalculated && op->frame.max > 0 && maxInCycle > op->frame.max){
                             maxInCycle = op->frame.max - 1;
                         }
                     }
@@ -1400,6 +1437,13 @@ bool Module::getALAPTimes(vector<Operation *> nodes, int endTime) {
                     
                     /* Update all variables to continue Alap process */
                     tempCycle = maxInCycle;
+                    if(nodes.at(i)->ifelse->ifOperations.size() != 0){
+                        if(nodes.at(i)->ifelse->ifOperations.at(0)->getOperation() == IFELSE){
+                            if(nodes.at(i)->ifelse->ifOperations.at(0)->frame.max - 1 < tempCycle){
+                                tempCycle = nodes.at(i)->ifelse->ifOperations.at(0)->frame.max - 1;
+                            }
+                        }
+                    }
                     for(auto &j : nodes.at(i)->ifelse->ifOperations){
                         if(j->frame.max < tempCycle){
                             tempCycle = j->frame.max;
