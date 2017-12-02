@@ -703,6 +703,12 @@ bool Module::output_module(string file) {
     for(int i = 1; i <= Latency; i++){
         out << ", S" << i << " = " << i;
     }
+//    int count = 0;
+//    for(auto &i : operations){
+//        if(i->getOperation() == IFELSE){
+//            //countParam(count, i);
+//        }
+//    }
     out << ", Final = " << Latency + 1 << ";" << endl << endl;
     
     /* Print states and operations */
@@ -792,6 +798,10 @@ bool Module::output_module(string file) {
     out.close();
     
     return true;
+}
+
+void Module::countParam(int &count, Operation *node){
+    
 }
 
 /**
