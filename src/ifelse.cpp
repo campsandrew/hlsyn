@@ -4,7 +4,7 @@
  * NetID: ichikasuto, andrewcamps
  * Date: November 29, 2017
  *
- * Description:
+ * Description: Empty file
  *
  **********************************************************************************/
 

@@ -4,7 +4,7 @@
  * NetID: ichikasuto, andrewcamps
  * Date: November 17, 2017
  *
- * Description:
+ * Description: Various functions to help create the nodes of the graph and print out the operations to the verilog file
  *
  **********************************************************************************/
 
@@ -93,6 +93,9 @@ int Operation::getCycleDelay(){
         case DIV:
         case MOD:
             return 3;
+        case IFELSE:
+            /* Do nothing */
+            break;
     }
     
     return 0;

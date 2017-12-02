@@ -1,2 +1,0 @@
-# hlsyn
-High-level synthesizer
