@@ -323,14 +323,14 @@ bool Module::parseLine(vector<string> line) {
             newOp->inIfElse = true;
             newOp->parent = openBlocks.front();
             if(newOp->parent->ifelse->inElseBlock){
-                for(int i = 0; i < (unsigned)newOp->parent->ifelse->elseOperations.size(); i++){
+                for(int i = 0; i < (signed)newOp->parent->ifelse->elseOperations.size(); i++){
                     if(newOp->parent->ifelse->elseOperations.at(i)->getOperation() == IFELSE){
                         newOp->toIfOp = newOp->parent->ifelse->elseOperations.at(i);
                         newOp->parent->ifelse->elseOperations.at(i)->afterIf.push_back(newOp);
                     }
                 }
             }else{
-                for(int i = 0; i < (unsigned)newOp->parent->ifelse->ifOperations.size(); i++){
+                for(int i = 0; i < (signed)newOp->parent->ifelse->ifOperations.size(); i++){
                     if(newOp->parent->ifelse->ifOperations.at(i)->getOperation() == IFELSE){
                         newOp->toIfOp = newOp->parent->ifelse->ifOperations.at(i);
                         newOp->parent->ifelse->ifOperations.at(i)->afterIf.push_back(newOp);
@@ -338,7 +338,7 @@ bool Module::parseLine(vector<string> line) {
                 }
             }
         }else{
-            for(int i = 0; i < (unsigned)operations.size(); i++){
+            for(int i = 0; i < (signed)operations.size(); i++){
                 if(operations.at(i)->getOperation() == IFELSE){
                     newOp->toIfOp = operations.at(i);
                     operations.at(i)->afterIf.push_back(newOp);
@@ -732,7 +732,7 @@ bool Module::output_module(string file) {
     for(int i = 1; i <= Latency; i++){
         int ifOpIndex = -1;
         out << "\t\t\t\tS" << i << ": begin" << endl;
-        for(int j = 0; j < (unsigned)operations.size(); j++){
+        for(int j = 0; j < (signed)operations.size(); j++){
             if(operations.at(j)->scheduledTime == i){
                 if(operations.at(j)->getOperation() != IFELSE){
                     out << "\t\t\t\t\t" << operations.at(j)->toString() << endl;
@@ -812,7 +812,7 @@ void Module::outputIfBlock(ofstream &outF, int index, bool first, int prevEnd, i
         tempStateNum = ifCount;
         tempStateNum += nestedCount;
         outF << "\t\t\t\tif_S" << tempStateNum << ": begin" << endl;
-        for(int j = 0; j < (unsigned)ifOp->ifelse->ifOperations.size(); j++){
+        for(int j = 0; j < (signed)ifOp->ifelse->ifOperations.size(); j++){
             if(ifCount < 2) {
                 if((ifOp->ifelse->ifOperations.at(j)->scheduledTime - 1) == i){
                     if(ifOp->ifelse->ifOperations.at(j)->getOperation() != IFELSE){
@@ -896,7 +896,7 @@ void Module::outputElseBlock(ofstream &outF, int index, bool first, int prevEnd,
     for(int i = ifOp->frame.min; i <= ifOp->ifelse->elseEndTime; i++){
         int ifOpIndex = -1;
         outF << "\t\t\t\telse_S" << elseCount + nestedIndex << ": begin" << endl;
-        for(int j = 0; j < (unsigned)ifOp->ifelse->elseOperations.size(); j++){
+        for(int j = 0; j < (signed)ifOp->ifelse->elseOperations.size(); j++){
             if(ifOp->ifelse->elseOperations.at(j)->scheduledTime == i){
                 if(ifOp->ifelse->elseOperations.at(j)->getOperation() != IFELSE){
                     outF << "\t\t\t\t\t" << ifOp->ifelse->elseOperations.at(j)->toString() << endl;
@@ -1151,7 +1151,7 @@ void Module::resetUnscheduled(vector<Operation *> unscheduled, bool ASAP){
  */
 void Module::resetScheduled(vector<Operation *> scheduled, bool ALAP){
     
-    for(int i = 0; i < (unsigned)scheduled.size(); i++){
+    for(int i = 0; i < (signed)scheduled.size(); i++){
         if(scheduled.at(i)->varNext != NULL){
             bool notApart = true;
             for(auto &j : scheduled.at(i)->varNext->toOperations){
@@ -1228,7 +1228,7 @@ bool Module::getASAPTimes(vector<Operation *> nodes, int startTime) {
         
         /* Iterate through all operations to update delays */
         bool opRemoved = false;
-        for (int i = 0; i < (unsigned)nodes.size(); i++) {
+        for (int i = 0; i < (signed)nodes.size(); i++) {
             bool inCyclesCalculated = true;
             int tempCycle = 0;
             int maxInCycle = startTime;
@@ -1379,7 +1379,7 @@ bool Module::getALAPTimes(vector<Operation *> nodes, int endTime) {
         
         /* Iterate through all operations to update delays */
         bool opRemoved = false;
-        for (int i = 0; i < (unsigned)nodes.size(); i++) {
+        for (int i = 0; i < (signed)nodes.size(); i++) {
             bool inCyclesCalculated = true;
             double tempCycle = 0;
             double maxInCycle = endTime + 1;
@@ -1500,7 +1500,7 @@ bool Module::getALAPTimes(vector<Operation *> nodes, int endTime) {
                 }
                 
                 /* Remove currently calculated operation from the operation queue */
-                for(int j = 0; j < (unsigned)operationQueue.size(); j++){
+                for(int j = 0; j < (signed)operationQueue.size(); j++){
                     if(nodes.at(i)->getOperation() == operationQueue.at(j)->getOperation()
                        && nodes.at(i)->getOpID() == operationQueue.at(j)->getOpID()){
                         operationQueue.erase(operationQueue.begin() + j);
@@ -1571,7 +1571,7 @@ void Module::getTypePropabilities(){
         sum_DivMod.push_back(0);
     }
     
-    for(int i = 0; i < res_AddSub.size(); i++){
+    for(int i = 0; i < (signed)res_AddSub.size(); i++){
         double prop = 1.0 / (double)res_AddSub.at(i)->frame.getWidth();
         for(int j = 1; j <= Latency; j++){
             if(j >= res_AddSub.at(i)->frame.min && j <= res_AddSub.at(i)->frame.max){
@@ -1580,7 +1580,7 @@ void Module::getTypePropabilities(){
         }
     }
     
-    for(int i = 0; i < res_Mul.size(); i++){
+    for(int i = 0; i < (signed)res_Mul.size(); i++){
         double prop = 1.0 / (double)res_Mul.at(i)->frame.getWidth();
         for(int j = 1; j <= Latency; j++){
             if(j >= res_Mul.at(i)->frame.min && j <= res_Mul.at(i)->frame.max){
@@ -1588,7 +1588,7 @@ void Module::getTypePropabilities(){
             }
         }
     }
-    for(int i = 0; i < res_Logic.size(); i++){
+    for(int i = 0; i < (signed)res_Logic.size(); i++){
         double prop = 1.0 / (double)res_Logic.at(i)->frame.getWidth();
         for(int j = 1; j <= Latency; j++){
             if(j >= res_Logic.at(i)->frame.min && j <= res_Logic.at(i)->frame.max){
@@ -1596,7 +1596,7 @@ void Module::getTypePropabilities(){
             }
         }
     }
-    for(int i = 0; i < res_DivMod.size(); i++){
+    for(int i = 0; i < (signed)res_DivMod.size(); i++){
         double prop = 1.0 / (double)res_DivMod.at(i)->frame.getWidth();
         for(int j = 1; j <= Latency; j++){
             if(j >= res_DivMod.at(i)->frame.min && j <= res_DivMod.at(i)->frame.max){
@@ -1613,7 +1613,7 @@ void Module::getTotalForces(vector<Operation *> nodes){
     
     getForces(nodes);
     
-    for(int i = 0; i < (unsigned)nodes.size(); i++){
+    for(int i = 0; i < (signed)nodes.size(); i++){
         int j = nodes.at(i)->frame.min;
         int tempTime = j;
         double minForce = nodes.at(i)->selfForces.at(j - 1) + nodes.at(i)->sucessorForces.at(j - 1) +
@@ -1640,7 +1640,7 @@ void Module::getTotalForces(vector<Operation *> nodes){
 void Module::getForces(vector<Operation *> nodes) {
     
     /* Clear force variables */
-    for(int i = 0; i < (unsigned)nodes.size(); i++){
+    for(int i = 0; i < (signed)nodes.size(); i++){
         nodes.at(i)->selfForces.clear();
         nodes.at(i)->sucessorForces.clear();
         nodes.at(i)->predecessorForces.clear();
@@ -1648,7 +1648,7 @@ void Module::getForces(vector<Operation *> nodes) {
     
     /* Get the self forces at each time in nodes time frame */
     for(int i = 1; i <= Latency; i++){
-        for(int j = 0; j < (unsigned)nodes.size(); j++){
+        for(int j = 0; j < (signed)nodes.size(); j++){
             double selfForce = 0;
             double prop = 1.0 / (double)nodes.at(j)->frame.getWidth();
             if(i >= nodes.at(j)->frame.min && i <= nodes.at(j)->frame.max){
@@ -1717,7 +1717,7 @@ void Module::getForces(vector<Operation *> nodes) {
     
     /* Get the pred and succ forces at each time in nodes time frame */
     for(int i = 1; i <= Latency; i++){
-        for(int j = 0; j < (unsigned)nodes.size(); j++){
+        for(int j = 0; j < (signed)nodes.size(); j++){
             if(nodes.at(j)->selfForces.at(i - 1) != NO_FORCE){
                 nodes.at(j)->sucessorForces.at(i - 1) = getSuccessorForces(nodes.at(j), i);
                 nodes.at(j)->predecessorForces.at(i - 1) = getPredecessorForces(nodes.at(j), i);
@@ -1738,7 +1738,7 @@ double Module::getSuccessorForces(Operation *node, int latency) {
     }
     
     /* Recursive call to get all successor forces */
-    for(int i = 0; i < (unsigned)node->varNext->toOperations.size(); i++){
+    for(int i = 0; i < (signed)node->varNext->toOperations.size(); i++){
         Operation *suc = node->varNext->toOperations.at(i);
         if(latency >= suc->frame.min){
             return suc->selfForces.at(latency) + getSuccessorForces(suc, latency + 1);
@@ -1782,7 +1782,7 @@ void Module::scheduleNode(vector<Operation *> &scheduled ,vector<Operation *> &u
     
     /* Find node to be scheduled */
     int index = 0;
-    for(int i = 0; i < (unsigned)unscheduled.size(); i++){
+    for(int i = 0; i < (signed)unscheduled.size(); i++){
         if(minForce > unscheduled.at(i)->totalForce && unscheduled.at(i)->getOperation() != IFELSE){
             minForce = unscheduled.at(i)->totalForce;
             index = i;

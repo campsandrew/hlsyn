@@ -93,6 +93,9 @@ int Operation::getCycleDelay(){
         case DIV:
         case MOD:
             return 3;
+        case IFELSE:
+            /* Do nothing */
+            break;
     }
     
     return 0;
