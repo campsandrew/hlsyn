@@ -932,7 +932,7 @@ void Module::outputIfBlock(ofstream &outF, int index, bool first, int prevEnd, i
                 if(ifOp->ifelse->ifEndTime >= prevEnd && first){
                     outF << "\t\t\t\t\t\tstate <= Final;" << endl;
                 }else if(first){
-                    outF << "\t\t\t\t\tstate <= S" << ifOp->tempTime  << ";" << endl;
+                    outF << "\t\t\t\t\tstate <= S" << ifOp->scheduledTime + 1 << ";" << endl;
                     finished = true;
                 }else{
                     ifState++;
