@@ -809,6 +809,7 @@ void Module::outputIfBlock(ofstream &outF, int index, bool first, int prevEnd, i
     int orig = index;
     int origIfCount = ifCount;
     int origElseCount = elseCount;
+    int temp = 0;
     Operation *ifOp = new Operation();
     
     if (ifCount < 2) {
@@ -816,6 +817,36 @@ void Module::outputIfBlock(ofstream &outF, int index, bool first, int prevEnd, i
     }else {
         ifOp = operations.at(index)->ifelse->ifOperations.at(nestedIndex);
     }
+    
+    int ifOpIndex = -1;
+    outF << "\t\t\t\tif_S" << ifState << ": begin" << endl;
+    for (int i = 0; i < ifOp->ifelse->ifOperations.size(); i++) {
+        ifOpIndex = -1;
+        if (ifCount < 2) {
+            if(ifOp->ifelse->ifOperations.at(i)->getOperation() != IFELSE){
+                outF << "\t\t\t\t\t" << ifOp->ifelse->ifOperations.at(i)->toString() << endl;
+                ifOp->printedOps++;
+            }else{
+                ifOpIndex = i;
+                ifCount++;
+                nestedCount++;
+                ifState++;
+            }
+        }else{
+            if(ifOp->ifelse->ifOperations.at(i)->getOperation() != IFELSE){
+                outF << "\t\t\t\t\t" << ifOp->ifelse->ifOperations.at(i)->toString() << endl;
+                ifOp->printedOps++;
+                if(ifOp->printedOps != ifOp->ifelse->ifOperations.size()) {
+                    continue;
+                }
+            }else{
+                ifOpIndex = i;
+                ifCount++;
+                nestedCount++;
+                ifState++;
+            }
+        }
+    /*
     for(int i = ifOp->frame.min; i <= ifOp->ifelse->ifEndTime; i++){
         int ifOpIndex = -1, tempStateNum = 0;
         outF << "\t\t\t\tif_S" << ifState << ": begin" << endl;
@@ -856,7 +887,7 @@ void Module::outputIfBlock(ofstream &outF, int index, bool first, int prevEnd, i
                 }
             }
         }
-        
+        */
         int ifPrevEnd = 0;
         int elsePrevEnd = 0;
         if(ifOpIndex != -1){
@@ -868,28 +899,32 @@ void Module::outputIfBlock(ofstream &outF, int index, bool first, int prevEnd, i
             }
             
             outF << "\t\t\t\t\tif(" + cond + ")" << endl;
-            outF << "\t\t\t\t\t\tstate <= if_S" << ifCount << ";" << endl;
+            //outF << "\t\t\t\t\t\tstate <= if_S" << ifCount << ";" << endl;
+            outF << "\t\t\t\t\t\tstate <= if_S" << ifState << ";" << endl;
             outF << "\t\t\t\t\telse" << endl;
             
             ifPrevEnd = ifOp->ifelse->ifOperations.at(ifOpIndex)->ifelse->ifEndTime;
             if(ifOp->ifelse->ifOperations.at(ifOpIndex)->ifelse->elseOperations.size() != 0){
                 outF << "\t\t\t\t\t\tstate <= else_S" << elseCount << ";" << endl;
+                elseCount++;
                 elsePrevEnd = ifOp->ifelse->ifOperations.at(ifOpIndex)->ifelse->elseEndTime;
             }else{
-                outF << "\t\t\t\t\t\tstate <= if_S" << ifCount + 1 << ";" << endl;
+                outF << "\t\t\t\t\t\tstate <= if_S" << ifState + 1 << ";" << endl;
             }
         }else{
-            if(i != ifOp->ifelse->ifEndTime){
+            if(ifOp->printedOps != ifOp->ifelse->ifOperations.size()){
                 outF << "\t\t\t\t\tstate <= if_S" << ifCount + 1 << ";" << endl;
             }else{
                 if(ifOp->ifelse->ifEndTime >= prevEnd && first){
                     outF << "\t\t\t\t\t\tstate <= Final;" << endl;
                 }else if(first){
-                    outF << "\t\t\t\t\tstate <= S" << ifOp->ifelse->ifEndTime - ifCount << ";" << endl;
+                    outF << "\t\t\t\t\tstate <= S" << ifOp->tempTime  << ";" << endl;
                     finished = true;
                 }else{
-                    outF << "\t\t\t\t\tstate <= if_S" << ifOp->ifelse->ifEndTime - ifCount << ";" << endl;
                     ifState++;
+                    ifOp->ifelse->finished = true;
+                    outF << "\t\t\t\t\tstate <= if_S" << ifState << ";" << endl;
+                    
                 }
             }
         }
@@ -898,6 +933,11 @@ void Module::outputIfBlock(ofstream &outF, int index, bool first, int prevEnd, i
         /* Print if states */
         if(ifCount > origIfCount && !finished) {
             outputIfBlock(outF, orig, false, ifPrevEnd, ifCount, elseCount, ifOpIndex, nestedCount, ifState);
+            if(ifOp->ifelse->ifOperations.at(i)->ifelse->finished){
+                operations.at(index)->ifelse->ifOperations.erase(operations.at(index)->ifelse->ifOperations.begin());
+                i--;
+                outF << "\t\t\t\tif_S" << ifState << ": begin" << endl;
+            }
         }
         if(elseCount > origElseCount && !finished) {
             outputElseBlock(outF, orig, false, elsePrevEnd, ifCount, elseCount, ifOpIndex, nestedCount, ifState);

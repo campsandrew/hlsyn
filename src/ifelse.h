@@ -28,6 +28,7 @@ public:
     bool inElseBlock = false;
     vector<Operation *> ifOperations;
     vector<Operation *> elseOperations;
+    bool finished = false;
     
     int ifEndTime = 0;
     int elseEndTime = 0;
