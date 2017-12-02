@@ -771,10 +771,12 @@ bool Module::output_module(string file) {
             }
         }
         out << "\t\t\t\tend" << endl;
-
+        
+        int nested = 0, nestedCount = 0;
+        
         /* Print if states */
-        outputIfBlock(out, ifOpIndex, true, Latency, ifCount, elseCount);
-        outputElseBlock(out, ifOpIndex, true, Latency, ifCount, elseCount);
+        outputIfBlock(out, ifOpIndex, true, Latency, ifCount, elseCount, nested, nestedCount);
+        outputElseBlock(out, ifOpIndex, true, Latency, ifCount, elseCount, nested, nestedCount);
         
     }
     
@@ -792,21 +794,44 @@ bool Module::output_module(string file) {
     return true;
 }
 
-void Module::outputIfBlock(ofstream &outF, int index, bool first, int prevEnd, int &ifCount, int &elseCount){
+void Module::outputIfBlock(ofstream &outF, int index, bool first, int prevEnd, int &ifCount, int &elseCount, int &nestedIndex, int &nestedCount){
     if(index == -1){
         return;
     }
-    
-    Operation *ifOp = operations.at(index);
+    int orig = index;
+    int origIfCount = ifCount;
+    int origElseCount = elseCount;
+    Operation *ifOp = new Operation();
+    if (ifCount < 2) {
+        ifOp = operations.at(index);
+    }else {
+        ifOp = operations.at(index)->ifelse->ifOperations.at(nestedIndex);
+    }
     for(int i = ifOp->frame.min; i <= ifOp->ifelse->ifEndTime; i++){
-        int ifOpIndex = -1;
-        outF << "\t\t\t\tif_S" << ifCount << ": begin" << endl;
+        int ifOpIndex = -1, tempStateNum = 0;
+        tempStateNum = ifCount;
+        tempStateNum += nestedCount;
+        outF << "\t\t\t\tif_S" << tempStateNum << ": begin" << endl;
         for(int j = 0; j < (unsigned)ifOp->ifelse->ifOperations.size(); j++){
-            if(ifOp->ifelse->ifOperations.at(j)->scheduledTime == i){
-                if(ifOp->ifelse->ifOperations.at(j)->getOperation() != IFELSE){
-                    outF << "\t\t\t\t\t" << ifOp->ifelse->ifOperations.at(j)->toString() << endl;
-                }else{
-                    ifOpIndex = j;
+            if(ifCount < 2) {
+                if((ifOp->ifelse->ifOperations.at(j)->scheduledTime - 1) == i){
+                    if(ifOp->ifelse->ifOperations.at(j)->getOperation() != IFELSE){
+                        outF << "\t\t\t\t\t" << ifOp->ifelse->ifOperations.at(j)->toString() << endl;
+                    }else{
+                        ifOpIndex = j;
+                        ifCount++;
+                        nestedCount++;
+                    }
+                }
+            }else {
+                if(ifOp->ifelse->ifOperations.at(j)->scheduledTime == i){
+                    if(ifOp->ifelse->ifOperations.at(j)->getOperation() != IFELSE){
+                        outF << "\t\t\t\t\t" << ifOp->ifelse->ifOperations.at(j)->toString() << endl;
+                    }else{
+                        ifOpIndex = j;
+                        ifCount++;
+                        nestedCount++;
+                    }
                 }
             }
         }
@@ -822,7 +847,7 @@ void Module::outputIfBlock(ofstream &outF, int index, bool first, int prevEnd, i
             }
             
             outF << "\t\t\t\t\tif(" + cond + ")" << endl;
-            outF << "\t\t\t\t\t\tstate <= if_S" << ifCount + 1 << ";" << endl;
+            outF << "\t\t\t\t\t\tstate <= if_S" << ifCount << ";" << endl;
             outF << "\t\t\t\t\telse" << endl;
             
             ifPrevEnd = ifOp->ifelse->ifOperations.at(ifOpIndex)->ifelse->ifEndTime;
@@ -841,28 +866,36 @@ void Module::outputIfBlock(ofstream &outF, int index, bool first, int prevEnd, i
                 }else if(first){
                     outF << "\t\t\t\t\tstate <= S" << ifOp->ifelse->ifEndTime + 1 << ";" << endl;
                 }else{
-                    outF << "\t\t\t\t\t\tstate <= if_S" << ifOp->ifelse->ifEndTime + 1 << ";" << endl;
+                    outF << "\t\t\t\t\tstate <= if_S" << ifOp->ifelse->ifEndTime - ifCount << ";" << endl;
                 }
             }
         }
         outF << "\t\t\t\tend" << endl;
-        ifCount++;
         
         /* Print if states */
-        outputIfBlock(outF, ifOpIndex, false, ifPrevEnd, ifCount, elseCount);
-        outputElseBlock(outF, ifOpIndex, false, elsePrevEnd, ifCount, elseCount);
+        if(ifCount > origIfCount) {
+            outputIfBlock(outF, orig, false, ifPrevEnd, ifCount, elseCount, ifOpIndex, nestedCount);
+        }
+        if(elseCount > origElseCount) {
+            outputElseBlock(outF, orig, false, elsePrevEnd, ifCount, elseCount, ifOpIndex, nestedCount);
+        }
     }
 }
 
-void Module::outputElseBlock(ofstream &outF, int index, bool first, int prevEnd, int &ifCount, int &elseCount){
+void Module::outputElseBlock(ofstream &outF, int index, bool first, int prevEnd, int &ifCount, int &elseCount, int &nestedIndex, int &nestedCount){
     if(index == -1){
         return;
     }
-    
-    Operation *ifOp = operations.at(index);
+    int orig = index;
+    Operation *ifOp = new Operation();
+    if (elseCount < 2) {
+        ifOp = operations.at(index);
+    }else {
+        ifOp = operations.at(orig)->ifelse->elseOperations.at(nestedIndex);
+    }
     for(int i = ifOp->frame.min; i <= ifOp->ifelse->elseEndTime; i++){
         int ifOpIndex = -1;
-        outF << "\t\t\t\telse_S" << elseCount << ": begin" << endl;
+        outF << "\t\t\t\telse_S" << elseCount + nestedIndex << ": begin" << endl;
         for(int j = 0; j < (unsigned)ifOp->ifelse->elseOperations.size(); j++){
             if(ifOp->ifelse->elseOperations.at(j)->scheduledTime == i){
                 if(ifOp->ifelse->elseOperations.at(j)->getOperation() != IFELSE){
@@ -911,8 +944,8 @@ void Module::outputElseBlock(ofstream &outF, int index, bool first, int prevEnd,
         elseCount++;
         
         /* Print if states */
-        outputIfBlock(outF, ifOpIndex, false, ifPrevEnd, ifCount, elseCount);
-        outputElseBlock(outF, ifOpIndex, false, elsePrevEnd, ifCount, elseCount);
+        outputIfBlock(outF, orig, false, ifPrevEnd, ifCount, elseCount, ifOpIndex, nestedCount);
+        outputElseBlock(outF, ifOpIndex, false, elsePrevEnd, ifCount, elseCount, ifOpIndex, nestedCount);
     }
 }
 

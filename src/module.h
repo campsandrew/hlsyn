@@ -17,6 +17,7 @@
 #include <sstream>
 #include <fstream>
 #include <cmath>
+#include <iterator>
 
 #include "input.h"
 #include "output.h"
@@ -63,8 +64,8 @@ public:
     int getLatency() { return Latency; }
     bool build_module(string file);    /* Builds the data path graph */
     bool output_module(string file);   /* Prints the module in .v format */
-    void outputIfBlock(ofstream &outF, int index, bool first, int prevEnd, int &ifCount, int &elseCount);
-    void outputElseBlock(ofstream &outF, int index, bool first, int prevEnd, int &ifCount, int &elseCount);
+    void outputIfBlock(ofstream &outF, int index, bool first, int prevEnd, int &ifCount, int &elseCount, int &nestedIndex, int &nestedCount);
+    void outputElseBlock(ofstream &outF, int index, bool first, int prevEnd, int &ifCount, int &elseCount, int &nestedIndex, int &nestedCount);
     vector<Operation *> operations;
     vector<Output *> outputs;
     vector<Input *> inputs;
